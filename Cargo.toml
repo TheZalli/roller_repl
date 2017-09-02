@@ -1,0 +1,9 @@
+[package]
+name = "roller"
+version = "0.1.0"
+authors = ["mrZalli <misterzalli@gmail.com>"]
+
+[dependencies]
+libc = "^0.2.30"
+rustyline = "^1.0.0"
+
