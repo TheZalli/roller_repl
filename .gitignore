@@ -1,2 +1,4 @@
 /target/
 **/*.rs.bk
+/parser/*.rs  # lalrpop generated files
+!/parser/mod.rs
