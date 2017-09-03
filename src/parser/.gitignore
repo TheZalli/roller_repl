@@ -1,0 +1,3 @@
+# lalrpop generated files
+*.rs
+!mod.rs

@@ -1,24 +1,95 @@
 use std::str::FromStr;
 
+use num::rational::Ratio;
+use num::traits::FromPrimitive;
+
+use ast::*;
+
 grammar;
 
-pub Expr: i32 = {
-    <l:Expr> "+" <r:Factor> => l + r,
-    <l:Expr> "-" <r:Factor> => l - r,
-    Factor,
+// comma separated list of values with optional trailing comma
+comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
 };
 
-Factor: i32 = {
-    <l:Factor> "*" <r:Term> => l * r,
-    <l:Factor> "/" <r:Term> => l / r,
-    Term,
+// expression tier, used for operator precedence
+tier<Op, NextTier>: Expr = {
+    <lhs: tier<Op, NextTier>> <op: Op> <rhs: NextTier> => Expr::Op(
+        FunCall::new_with_args(op, vec![lhs, rhs])
+    ),
+    NextTier
 };
 
-Term: i32 = {
-    Num,
-    "(" <Expr> ")",
+// a pair separated by a colon
+colon_pair<T, U>: (T, U) = <T> ":" <U> => (<>, <>);
+
+pub expr: Expr = {
+    infix_op_1 => <>,
 };
 
-Num: i32 = {
-    r"[0-9]+" => i32::from_str(<>).unwrap(),
+// precedence levels
+infix_op_1: Expr = tier<operator_1, infix_op_2>;
+infix_op_2: Expr = tier<operator_2, infix_op_3>;
+infix_op_3: Expr = tier<operator_3, infix_op_4>;
+infix_op_4: Expr = tier<operator_4, term>;
+
+// terminal value
+term: Expr = {
+    value => Expr::Val(<>),
+    identifier => Expr::Id(<>),
+    "List" "(" <comma<expr>> ")" => Expr::List(<>),
+    "Set" "(" <comma<expr>> ")" => Expr::Set(<>.into_iter().collect()),
+    <id: identifier> "(" <args: comma<expr>> ")" => Expr::Op(
+        FunCall::new_with_args(OpCode::Id(id), args)
+    ),
+    "(" <expr> ")" => <>,
+};
+
+value: Value = {
+    "none" => Value::None,
+    "true" => Value::Bool(true),
+    "false" => Value::Bool(false),
+    int => Value::Int(<>),
+    float => Value::Real(Ratio::from_f64(<>).unwrap()),
+};
+
+identifier: String = r"([\pL_][\pL\pN_]*)" => <>.to_owned();
+
+int: i64 = {
+    r"-?[0-9]+" => i64::from_str(<>).unwrap(),
+};
+
+float: f64 = {
+    // the reason this looks so scary is that we don't want to match integer 
+    // literals because that is an ambiguity and lalrpop match structure isn't 
+    // working.
+    // TODO fix
+    r"-?[0-9]+(\.[0-9]+|(\.[0-9]+)?[Ee][-+]?[0-9]+)" =>
+    f64::from_str(<>).unwrap(),
+
+};
+
+operator_1: OpCode = {
+    "=" => OpCode::Assign,
+};
+
+operator_2: OpCode = {
+    "+" => OpCode::Add,
+    "-" => OpCode::Sub,
+};
+
+operator_3: OpCode = {
+    "*" => OpCode::Mul,
+    "/" => OpCode::Div,
+};
+
+operator_4: OpCode = {
+    "^" => OpCode::Exp,
 };

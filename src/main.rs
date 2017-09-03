@@ -1,6 +1,8 @@
 extern crate libc;
 extern crate rustyline;
+extern crate num;
 
+mod ast;
 mod parser;
 
 use std::io;
@@ -56,7 +58,7 @@ fn real_main() -> i32 {
                 }
 
                 let input = input.trim();
-                let parsed_res = expr::parse_Expr(input);
+                let parsed_res = expr::parse_expr(input);
 
                 println!("Result is: {:?}", parsed_res);
             },
