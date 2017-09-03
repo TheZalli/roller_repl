@@ -3,6 +3,9 @@ extern crate rustyline;
 
 mod parser;
 
+use std::io;
+use std::io::BufRead;
+
 use rustyline::error::ReadlineError;
 use parser::expr;
 
@@ -11,28 +14,47 @@ fn main() {
 }
 
 fn real_main() -> i32 {
-    // return value
-    let mut return_status = 1;
+    let in_isatty = unsafe { libc::isatty(libc::STDIN_FILENO as i32) } != 0;
+    let out_isatty = unsafe { libc::isatty(libc::STDOUT_FILENO as i32) } != 0;
 
-    let is_in_tty = unsafe { libc::isatty(libc::STDIN_FILENO as i32) } != 0;
-    //let is_out_tty = unsafe { libc::isatty(libc::STDOUT_FILENO as i32) } != 0;
-
-    let mut rl = rustyline::Editor::<()>::new();
     let prompt = "> ";
 
-    if is_in_tty {
+    // rustyline input & output
+    let mut rl = rustyline::Editor::<()>::new();
+
+    // pipe input, since reading rustyline changes stdout
+    let mut pipe_reader = io::BufReader::new(io::stdin()).lines();
+
+    if in_isatty && out_isatty {
         println!("Interactive Roller REPL started");
     }
 
-    loop {
+    // return value
+    let return_status = loop {
         // read a line
-        let line = rl.readline(prompt);
-        match line {
-            Ok(ref input) if input.trim() == "" => continue, // empty input
+        let line_res = if out_isatty {
+            rl.readline(prompt)
+        } else {
+            pipe_reader.next()
+                .map_or(
+                    Err(ReadlineError::Eof),
+                    |res| res.map_err(&ReadlineError::from),
+                )
+        };
+
+        match line_res {
+            Ok(ref input) if input.trim().is_empty() => continue, // empty input
 
             Ok(input) => {
                 // ok input
-                rl.add_history_entry(&input.trim_right());
+                if out_isatty {
+                    rl.add_history_entry(&input.trim_right());
+                } else {
+                    // print prompt and input into pipe output
+                    // we might want to give a flag to supress this
+                    println!("{}{}", prompt, input);
+                }
+
                 let input = input.trim();
                 let parsed_res = expr::parse_Expr(input);
 
@@ -43,30 +65,31 @@ fn real_main() -> i32 {
 
             Err(ReadlineError::Interrupted) => {
                 // received interrupt (ctrl+C)
-                println!("Interrupt received");
-                return_status = 0;
-                break;
+                eprintln!("Interrupt received");
+                break 0;
             },
 
             Err(ReadlineError::Eof) => {
                 // received EOF (ctrl+D, or end of pipe input)
-                if is_in_tty {
-                    println!("End-of-file received");
+                if in_isatty {
+                    eprintln!("End-of-file received");
                 }
-                return_status = 0;
-                break;
+                break 0;
             },
 
             Err(e) => {
                 // other error, maybe IO error
                 // in some cases we might want to continue, but we don't want 
                 // any infinite loops
-                println!("Encountered error: {:?}", e);
-                break;
+                eprintln!("Encountered error: {:?}", e);
+                break 1;
             },
         }
+    };
+    
+    if in_isatty {
+        println!("Exiting");
     }
-    println!("Exiting");
 
     return_status
 }
