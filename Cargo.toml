@@ -5,11 +5,13 @@ authors = ["mrZalli <misterzalli@gmail.com>"]
 build = "build.rs"
 
 [dependencies]
-libc = "^0.2.30"
 rustyline = "^1.0.0"
 regex = "^0.2.1"
 lalrpop-util = "0.13.1"
 num = "^0.1.40"
+
+[target.'cfg(unix)'.dependencies]
+libc = "^0.2.30"
 
 [build-dependencies]
 lalrpop = "0.13.1" # for syntax parsing

@@ -1,4 +1,6 @@
+#[cfg(unix)]
 extern crate libc;
+
 extern crate rustyline;
 extern crate num;
 
@@ -16,8 +18,21 @@ fn main() {
 }
 
 fn real_main() -> i32 {
-    let in_isatty = unsafe { libc::isatty(libc::STDIN_FILENO as i32) } != 0;
-    let out_isatty = unsafe { libc::isatty(libc::STDOUT_FILENO as i32) } != 0;
+    let in_isatty;
+    #[cfg(unix)] {
+        in_isatty = unsafe { libc::isatty(libc::STDOUT_FILENO as i32) } != 0;
+    }
+    #[cfg(not(unix))] {
+        in_isatty = true;
+    }
+
+    let out_isatty;
+    #[cfg(unix)] {
+        out_isatty = unsafe { libc::isatty(libc::STDOUT_FILENO as i32) } != 0;
+    }
+    #[cfg(not(unix))] {
+        out_isatty = true;
+    };
 
     let prompt = "> ";
 
