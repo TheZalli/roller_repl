@@ -32,17 +32,23 @@ colon_pair<T, U>: (T, U) = <T> ":" <U> => (<>, <>);
 
 pub expr: Expr = {
     infix_op_1 => <>,
+    <lhs: infix_op_1> "|" <rhs: infix_op_1> <list: ("|" <infix_op_1>)*> => {
+        // alternating chain operation. this is a bit special since it has no 
+        // left or right precedence
+        let mut vector = vec![lhs, rhs];
+        vector.extend(list);
+        Expr::Op(FunCall::new_with_args(OpCode::Alternate, vector))
+    },
 };
 
 // precedence levels
 infix_op_1: Expr = tier<operator_1, infix_op_2>;
 infix_op_2: Expr = tier<operator_2, infix_op_3>;
 infix_op_3: Expr = tier<operator_3, infix_op_4>;
-infix_op_4: Expr = tier<operator_4, term>;
+infix_op_4: Expr = tier<operator_4, value>;
 
-// terminal value
-term: Expr = {
-    value => Expr::Val(<>),
+value: Expr = {
+    term => Expr::Val(<>),
     identifier => Expr::Id(<>),
     "List" "(" <comma<expr>> ")" => Expr::List(<>),
     "Set" "(" <comma<expr>> ")" => Expr::Set(<>.into_iter().collect()),
@@ -52,7 +58,7 @@ term: Expr = {
     "(" <expr> ")" => <>,
 };
 
-value: Value = {
+term: Value = {
     "none" => Value::None,
     "true" => Value::Bool(true),
     "false" => Value::Bool(false),

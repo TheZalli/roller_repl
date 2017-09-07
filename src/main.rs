@@ -6,12 +6,15 @@ extern crate num;
 
 mod ast;
 mod parser;
+mod eval;
 
 use std::io;
 use std::io::BufRead;
 
 use rustyline::error::ReadlineError;
+
 use parser::expr;
+use eval::EvalContext;
 
 fn main() {
     ::std::process::exit(real_main());
@@ -46,6 +49,9 @@ fn real_main() -> i32 {
         println!("Interactive Roller REPL started");
     }
 
+    // the evaluation context holding the runtime data
+    let mut ctx = EvalContext::new();
+
     // return value
     let return_status = loop {
         // read a line
@@ -73,12 +79,20 @@ fn real_main() -> i32 {
                 }
 
                 let input = input.trim();
-                let parsed_res = expr::parse_expr(input);
+                let parse_res = expr::parse_expr(input);
 
-                println!("Result is: {:?}", parsed_res);
+                println!("Parsed: {:?}", parse_res);
+
+                if let Ok(exp) = parse_res {
+                    match ctx.eval(exp) {
+                        Ok(out) => println!("{}", out),
+                        Err(e) => println!("Error, {}", e),
+                    }
+                }
             },
 
             // TODO: maybe check ReadlineError::WindowResize when on windows
+            // doesn't seem to affect anything though?
 
             Err(ReadlineError::Interrupted) => {
                 // received interrupt (ctrl+C)
