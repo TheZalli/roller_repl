@@ -5,7 +5,10 @@ extern crate rustyline;
 extern crate num;
 
 mod error;
+mod value;
+mod op;
 mod ast;
+mod lexer;
 mod parser;
 mod eval;
 

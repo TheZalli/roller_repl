@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use error::{EvalError, Result};
-use ast::{Expr, Value, IdType, FunCall, OpCode};
+use ast::{Expr, FunCall};
+use value::{Value, IdType};
+use op::OpCode;
 
 /// A namespace for variables.
 #[derive(Debug)]

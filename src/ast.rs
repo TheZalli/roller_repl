@@ -1,15 +1,13 @@
 #![allow(dead_code)] // TODO delete when things are used
 ///! Abstract syntax tree representation.
 
-use std::fmt;
 use std::collections::{BTreeMap, BTreeSet};
 
 use num::rational::Ratio;
 
 use error::EvalError;
-
-// Type of the identifier strings.
-pub type IdType = String;
+use value::{Value, IdType};
+use op::OpCode;
 
 /// A Roller expression.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -57,23 +55,6 @@ pub enum Control {
     },
 }
 
-/// A Roller value.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Value {
-    None,
-    Int(i64),
-    /// We use ratios because _fuck_ NaNs.
-    Real(Ratio<i64>),
-    Bool(bool),
-    Str(String),
-    Func(FunDef),
-    List(Vec<Value>),
-    Set(BTreeSet<Value>),
-    Map(BTreeMap<Value, Value>),
-    /// Evaluation-time error
-    Error(EvalError),
-}
-
 /// A function application with ordered and/or named arguments.
 /// 
 /// Not to be confused with `PrankCall`.
@@ -117,39 +98,4 @@ impl FunCall {
 pub struct FunDef {
     code: OpCode,
     // TODO
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum OpCode {
-    Id(IdType),
-
-    Identity,
-    Neg,
-    Not,
-
-    And,
-    Or,
-    Xor,
-
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Exp,
-
-    Is, // is
-    Set, // =
-    Assign, // :=
-
-    AssignAdd, // +=, etc
-    AssignSub,
-    AssignMul,
-    AssignDiv,
-    AssignExp,
-
-    Dot, // .
-    Alternate, // |
-    Dice, // d
-
-    Error, // error
 }

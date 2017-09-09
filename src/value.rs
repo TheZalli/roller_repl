@@ -1,10 +1,31 @@
 use std::fmt;
 use std::ops;
+use std::collections::{BTreeSet, BTreeMap};
 
 use num::rational::Ratio;
 
 use ast::*;
 use error::EvalError;
+
+// Type of the identifier strings.
+pub type IdType = String;
+
+/// A Roller value.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Value {
+    None,
+    Int(i64),
+    /// We use ratios because _fuck_ NaNs.
+    Real(Ratio<i64>),
+    Bool(bool),
+    Str(String),
+    Func(FunDef),
+    List(Vec<Value>),
+    Set(BTreeSet<Value>),
+    Map(BTreeMap<Value, Value>),
+    /// Evaluation-time error
+    Error(EvalError),
+}
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

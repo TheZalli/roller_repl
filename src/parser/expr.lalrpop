@@ -1,9 +1,8 @@
 use std::str::FromStr;
 
-use num::rational::Ratio;
-use num::traits::FromPrimitive;
-
 use ast::*;
+use value::Value;
+use op::OpCode;
 
 grammar;
 
