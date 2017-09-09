@@ -6,73 +6,13 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use num::rational::Ratio;
 
+use error::EvalError;
+
 // Type of the identifier strings.
 pub type IdType = String;
 
-/// Type of the internal evaluation errors.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct EvalError {
-    kind: EvalErrorKind,
-    message: String,
-}
-
-impl EvalError {
-    pub fn unsupported_op(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::UnsupportedOperation,
-            message: msg.to_owned(),
-        }
-    }
-
-    pub fn arithm_error(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::ArithmeticError,
-            message: msg.to_owned(),
-        }
-    }
-
-    pub fn var_not_found(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::VariableNotFound,
-            message: msg.to_owned(),
-        }
-    }
-
-    pub fn unimplemented(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::Unimplemented,
-            message: msg.to_owned(),
-        }
-    }
-
-    pub fn custom(custom_kind: &str, msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::Custom(custom_kind.to_owned()),
-            message: msg.to_owned(),
-        }
-    }
-
-}
-
-// TODO: Implement display
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum EvalErrorKind {
-    UnsupportedOperation,
-    ArithmeticError,
-    VariableNotFound,
-    Unimplemented,
-    Custom(String),
-}
-
-impl fmt::Display for EvalError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}: \"{}\"", self.kind, self.message)
-    }
-}
-
-
 /// A Roller expression.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Expr {
     /// Value literal
     Val(Value),
@@ -89,7 +29,7 @@ pub enum Expr {
     Ctrl(Control),
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Control {
     Break,
     Continue,
@@ -118,7 +58,7 @@ pub enum Control {
 }
 
 /// A Roller value.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     None,
     Int(i64),
@@ -137,41 +77,49 @@ pub enum Value {
 /// A function application with ordered and/or named arguments.
 /// 
 /// Not to be confused with `PrankCall`.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FunCall {
     /// Name of the function or the operator.
-    code: OpCode,
+    pub code: OpCode,
+    /// List of argument names.
+    pub names: Vec<IdType>,
     /// The vector of the ordered arguments.
-    ordered_args: Vec<Expr>,
+    pub ordered_args: Vec<Expr>,
     /// The vector of named arguments.
-    named_args: Vec<(IdType, Expr)>,
+    pub named_args: Vec<(IdType, Expr)>,
 }
 
 impl FunCall {
-    pub fn new(code: OpCode) -> Self {
+    pub fn new(code: OpCode, argument_names: Vec<IdType>) -> Self {
         FunCall {
             code: code,
+            names: argument_names,
             ordered_args: Vec::new(),
             named_args: Vec::new(),
         }
     }
 
-    pub fn new_with_args(code: OpCode, exprs: Vec<Expr>) -> Self {
+    pub fn new_with_args(code: OpCode,
+                         argument_names: Vec<IdType>,
+                         exprs: Vec<Expr>)
+                         -> Self
+    {
         FunCall {
             code: code,
+            names: argument_names,
             ordered_args: exprs,
             named_args: Vec::new(),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FunDef {
     code: OpCode,
     // TODO
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OpCode {
     Id(IdType),
 

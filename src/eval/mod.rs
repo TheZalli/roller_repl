@@ -1,8 +1,9 @@
 mod functions;
 mod env;
 
+use error::EvalError;
 use self::env::RollerNamespace;
-use ast::{Expr, EvalError};
+use ast::{Expr, Value};
 
 #[derive(Debug)]
 pub struct EvalContext {
@@ -18,10 +19,13 @@ impl EvalContext {
     }
 
     /// Evaluates the expression AST and returns a printable message.
-    pub fn eval(&mut self, ast: Expr) -> Result<String, EvalError> {
-        match ast {
-            Expr::Val(x) => return Ok(format!("{}", x)),
-            _ => Err(EvalError::unimplemented("")),
+    pub fn eval_fmt(&mut self, ast: Expr) -> Result<String, EvalError> {
+        match self.global_ns.eval(ast)? {
+            Value::Real(x) => return Ok(
+                // ratios print differently
+                format!("{} ≈ {}", x, *x.numer() as f64 / *x.denom() as f64)
+            ),
+            x => return Ok(format!("{}", x)),
         }
     }
 }

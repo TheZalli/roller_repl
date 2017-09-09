@@ -4,6 +4,7 @@ extern crate libc;
 extern crate rustyline;
 extern crate num;
 
+mod error;
 mod ast;
 mod parser;
 mod eval;
@@ -84,7 +85,7 @@ fn real_main() -> i32 {
                 println!("Parsed: {:?}", parse_res);
 
                 if let Ok(exp) = parse_res {
-                    match ctx.eval(exp) {
+                    match ctx.eval_fmt(exp) {
                         Ok(out) => println!("{}", out),
                         Err(e) => println!("Error, {}", e),
                     }

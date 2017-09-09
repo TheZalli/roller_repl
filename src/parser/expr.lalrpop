@@ -22,7 +22,7 @@ comma<T>: Vec<T> = {
 // expression tier, used for operator precedence
 tier<Op, NextTier>: Expr = {
     <lhs: tier<Op, NextTier>> <op: Op> <rhs: NextTier> => Expr::Op(
-        FunCall::new_with_args(op, vec![lhs, rhs])
+        FunCall::new_with_args(op, vec![], vec![lhs, rhs])
     ),
     NextTier
 };
@@ -37,7 +37,7 @@ pub expr: Expr = {
         // left or right precedence
         let mut vector = vec![lhs, rhs];
         vector.extend(list);
-        Expr::Op(FunCall::new_with_args(OpCode::Alternate, vector))
+        Expr::Op(FunCall::new_with_args(OpCode::Alternate, vec![], vector))
     },
 };
 
@@ -53,7 +53,7 @@ value: Expr = {
     "List" "(" <comma<expr>> ")" => Expr::List(<>),
     "Set" "(" <comma<expr>> ")" => Expr::Set(<>.into_iter().collect()),
     <id: identifier> "(" <args: comma<expr>> ")" => Expr::Op(
-        FunCall::new_with_args(OpCode::Id(id), args)
+        FunCall::new_with_args(OpCode::Id(id), vec![], args)
     ),
     "(" <expr> ")" => <>,
 };
@@ -62,8 +62,8 @@ term: Value = {
     "none" => Value::None,
     "true" => Value::Bool(true),
     "false" => Value::Bool(false),
-    int => Value::Int(<>),
-    float => Value::Real(Ratio::from_f64(<>).unwrap()),
+    int => <>.into(),
+    float => <>.into(),
 };
 
 identifier: String = r"([\pL_][\pL\pN_]*)" => <>.to_owned();
