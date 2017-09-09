@@ -3,6 +3,7 @@ extern crate libc;
 
 extern crate rustyline;
 extern crate num;
+extern crate regex;
 
 mod error;
 mod value;

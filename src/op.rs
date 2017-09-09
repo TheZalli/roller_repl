@@ -5,7 +5,6 @@ use value::{Value, IdType};
 pub enum OpCode {
     Id(IdType),
 
-    Identity,
     Neg,
     Not,
 
@@ -19,18 +18,9 @@ pub enum OpCode {
     Div,
     Exp,
 
-    Is, // is
-    Set, // =
-    Assign, // :=
-
-    AssignAdd, // +=, etc
-    AssignSub,
-    AssignMul,
-    AssignDiv,
-    AssignExp,
+    Assign, // =
 
     Dot, // .
-    Colon, // :
     Alternate, // |
     Dice, // d
 
