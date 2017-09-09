@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use error::*;
+use error::{EvalError, Result};
 use ast::{Expr, Value, IdType, FunCall, OpCode};
 
 /// A namespace for variables.
@@ -34,12 +34,38 @@ impl RollerNamespace {
             EvalError::var_not_found(id)
         )
     }
+}
 
+#[derive(Debug)]
+pub struct EvalContext {
+    global_ns: RollerNamespace,
+}
+
+impl EvalContext {
+    /// Creates a new empty context.
+    pub fn new() -> Self {
+        EvalContext {
+            global_ns: RollerNamespace::new(),
+        }
+    }
+
+    /// Evaluates the expression and returns a printable message.
+    pub fn eval_fmt(&mut self, ast: Expr) -> Result<String> {
+        match self.eval(ast)? {
+            Value::Real(x) => return Ok(
+                // ratios print differently
+                format!("{} ≈ {}", x, *x.numer() as f64 / *x.denom() as f64)
+            ),
+            x => return Ok(format!("{}", x)),
+        }
+    }
+
+    /// Evaluates the expression and returns the resulting value.
     pub fn eval(&mut self, expr: Expr) -> Result<Value> {
         match expr {
             Expr::Val(x) => Ok(x),
             Expr::Id(x) => {
-                let val: Value = (*self.var(&x)?).clone();
+                let val: Value = (*self.global_ns.var(&x)?).clone();
                 Ok(val)
             },
             Expr::Op(fun_call) => self.eval_call(fun_call),
@@ -47,7 +73,7 @@ impl RollerNamespace {
         }
     }
 
-    /// Evaluates a function call
+    /// Evaluates a function call.
     fn eval_call(&mut self, call: FunCall) -> Result<Value> {
         match call.code {
             OpCode::Add => self.acc_unnamed_op(call, |x, y| x+y),
@@ -82,7 +108,7 @@ impl RollerNamespace {
             // calculate result
             let mut acc = 
                 func(arg_values.pop_front().unwrap(),
-                        arg_values.pop_front().unwrap());
+                     arg_values.pop_front().unwrap());
             
             for val in arg_values {
                 acc = func(acc, val);
