@@ -21,10 +21,10 @@ pub enum Token {
     RParen, // )
     Comma, // ,
     Colon, // :
+    Alternate, // |
     Minus, // -, here because it can be unary or binary
     Op(OpCode),
-    Int,
-    Float,
+    Num,
     Str,
     Id,
 }
@@ -43,6 +43,7 @@ impl Default for Lexer {
             (r"\)", Token::RParen),
             (r",", Token::Comma),
             (r":", Token::Colon),
+            (r"\|", Token::Alternate),
             (r"-", Token::Minus),
 
             (r"+", Token::Op(OpCode::Add)),
@@ -53,11 +54,9 @@ impl Default for Lexer {
             (r"=", Token::Op(OpCode::Assign)),
 
             (r"\.", Token::Op(OpCode::Dot)),
-            (r"\|", Token::Op(OpCode::Alternate)),
             // TODO add other ops
 
-            (r"[0-9]+", Token::Int),
-            (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?", Token::Float),
+            (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?", Token::Num),
             (r#"".*?[^\\]""#, Token::Str),
             (r"[\pL_][\pL\pN_]*", Token::Id),
         ];

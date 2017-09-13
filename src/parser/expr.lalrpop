@@ -29,14 +29,31 @@ tier<Op, NextTier>: Expr = {
 // a pair separated by a colon
 colon_pair<T, U>: (T, U) = <T> ":" <U> => (<>, <>);
 
+alt_pair: (Expr, Option<Expr>) = {
+    <a:infix_op_1> => (a, None),
+    <a:infix_op_1> ":" <b:infix_op_1> => (a, Some(b)),
+};
+
 pub expr: Expr = {
     infix_op_1 => <>,
-    <lhs: infix_op_1> "|" <rhs: infix_op_1> <list: ("|" <infix_op_1>)*> => {
-        // alternating chain operation. this is a bit special since it has no 
-        // left or right precedence
-        let mut vector = vec![lhs, rhs];
-        vector.extend(list);
-        Expr::Op(FunCall::new_with_args(OpCode::Alternate, vec![], vector))
+    <lhs: alt_pair> "|" <rhs: alt_pair> <list: ("|" <alt_pair>)*> => {
+        // alternation that builds a distribution
+        use std::collections::BTreeMap;
+        let mut distr = BTreeMap::new();
+
+        let one_expr = Expr::Val(1.0f64.into());
+
+        // add left and right sides
+        distr.insert(lhs.0, lhs.1.unwrap_or(one_expr.clone()));
+        distr.insert(rhs.0, rhs.1.unwrap_or(one_expr.clone()));
+
+        // add the rest
+        for (exp, opt_weight) in list {
+            distr.insert(exp, opt_weight.unwrap_or(one_expr.clone()));
+        }
+
+        // return distribution
+        Expr::Distribution(distr)
     },
 };
 
@@ -61,14 +78,13 @@ term: Value = {
     "none" => Value::None,
     "true" => Value::Bool(true),
     "false" => Value::Bool(false),
-    int => <>.into(),
-    float => <>.into(),
+    num => <>.into(),
 };
 
 identifier: String = r"([\pL_][\pL\pN_]*)" => <>.to_owned();
 
-int: i64 = {
-    r"-?[0-9]+" => i64::from_str(<>).unwrap(),
+int: u64 = {
+    r"[0-9]+" => u64::from_str(<>).unwrap(),
 };
 
 float: f64 = {
@@ -76,9 +92,13 @@ float: f64 = {
     // literals because that is an ambiguity and lalrpop match structure isn't 
     // working.
     // TODO fix
-    r"-?[0-9]+(\.[0-9]+|(\.[0-9]+)?[Ee][-+]?[0-9]+)" =>
+    r"[0-9]+(\.[0-9]+|(\.[0-9]+)?[Ee][-+]?[0-9]+)" =>
     f64::from_str(<>).unwrap(),
+};
 
+num: f64 = {
+    <i:int> => i as f64,
+    <f:float> => f,
 };
 
 operator_1: OpCode = {

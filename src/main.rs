@@ -19,7 +19,7 @@ use std::io::BufRead;
 use rustyline::error::ReadlineError;
 
 use parser::expr;
-use eval::EvalContext;
+use eval::Env;
 
 fn main() {
     ::std::process::exit(real_main());
@@ -55,7 +55,7 @@ fn real_main() -> i32 {
     }
 
     // the evaluation context holding the runtime data
-    let mut ctx = EvalContext::new();
+    let mut env = Env::new();
 
     // return value
     let return_status = loop {
@@ -89,10 +89,7 @@ fn real_main() -> i32 {
                 println!("Parsed: {:?}", parse_res);
 
                 if let Ok(exp) = parse_res {
-                    match ctx.eval_fmt(exp) {
-                        Ok(out) => println!("{}", out),
-                        Err(e) => println!("Error, {}", e),
-                    }
+                    println!("{}", env.eval_print(exp));
                 }
             },
 

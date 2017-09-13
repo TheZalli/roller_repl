@@ -34,7 +34,7 @@ impl EvalError {
     pub fn var_not_found(id: &str) -> Self {
         EvalError {
             kind: EvalErrorKind::VariableNotFound,
-            message: format!("variable {} not found", id),
+            message: format!("variable `{}` not found", id),
         }
     }
 
@@ -67,6 +67,6 @@ pub enum EvalErrorKind {
 
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}: {}", self.kind, self.message)
+        write!(f, "{:?} error: {}", self.kind, self.message)
     }
 }

@@ -14,9 +14,7 @@ pub type IdType = String;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     None,
-    Int(i64),
-    /// We use ratios because _fuck_ NaNs.
-    Real(Ratio<i64>),
+    Num(Ratio<i64>),
     Bool(bool),
     Str(String),
     Func(FunDef),
@@ -31,8 +29,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &Value::None => write!(f, "none"),
-            &Value::Int(x) => write!(f, "{}", x),
-            &Value::Real(x) => write!(f, "{}", x),
+            &Value::Num(x) => write!(f, "{}", x),
             &Value::Bool(x) => write!(f, "{}", x),
             &Value::Str(ref x) => write!(f, "{}", x),
             &Value::Func(ref x) => write!(f, "{:?}", x), // TODO impl Display
@@ -48,12 +45,7 @@ impl ops::Add for Value {
     type Output = Value;
     fn add(self, rhs: Value) -> Value {
         match (self, rhs) {
-            (Value::Int(x), Value::Int(y)) => (x + y).into(),
-            (Value::Int(x), Value::Real(y)) =>
-                Value::Real(Ratio::from_integer(x) + y),
-            (Value::Real(x), Value::Int(y)) =>
-                Value::Real(x + Ratio::from_integer(y)),
-            (Value::Real(x), Value::Real(y)) => (x + y).into(),
+            (Value::Num(x), Value::Num(y)) => (x + y).into(),
             _ => Value::Error(EvalError::unsupported_op(
                 "addition not supported between these types"
             )) // TODO
@@ -63,7 +55,8 @@ impl ops::Add for Value {
 
 impl From<i64> for Value {
     fn from(i: i64) -> Value {
-        Value::Int(i)
+        use num::FromPrimitive;
+        Value::Num(Ratio::from_i64(i).unwrap())
     }
 }
 
@@ -71,12 +64,12 @@ impl From<f64> for Value {
     fn from(f: f64) -> Value {
         use num::FromPrimitive;
         // TODO ?: remove unwrap
-        Value::Real(Ratio::from_f64(f).unwrap())
+        Value::Num(Ratio::from_f64(f).unwrap())
     }
 }
 
 impl From<Ratio<i64>> for Value {
     fn from(r: Ratio<i64>) -> Value {
-        Value::Real(r)
+        Value::Num(r)
     }
 }

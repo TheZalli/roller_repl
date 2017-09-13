@@ -39,47 +39,48 @@ impl RollerNamespace {
 }
 
 #[derive(Debug)]
-pub struct EvalContext {
+pub struct Env {
     global_ns: RollerNamespace,
 }
 
-impl EvalContext {
+impl Env {
     /// Creates a new empty context.
     pub fn new() -> Self {
-        EvalContext {
+        Env {
             global_ns: RollerNamespace::new(),
         }
     }
 
     /// Evaluates the expression and returns a printable message.
-    pub fn eval_fmt(&mut self, ast: Expr) -> Result<String> {
-        match self.eval(ast)? {
-            Value::Real(x) => return Ok(
-                // ratios print differently
-                format!("{} ≈ {}", x, *x.numer() as f64 / *x.denom() as f64)
-            ),
-            x => return Ok(format!("{}", x)),
+    pub fn eval_print(&mut self, ast: Expr) -> String {
+        match self.eval(ast) {
+            Value::Num(x) if !x.is_integer() =>
+                // non-integer numerals print differently
+                format!("{} ≈ {}", x, *x.numer() as f64 / *x.denom() as f64),
+            x => format!("{}", x),
         }
     }
 
     /// Evaluates the expression and returns the resulting value.
-    pub fn eval(&mut self, expr: Expr) -> Result<Value> {
+    pub fn eval(&mut self, expr: Expr) -> Value {
         match expr {
-            Expr::Val(x) => Ok(x),
+            Expr::Val(x) => x,
             Expr::Id(x) => {
-                let val: Value = (*self.global_ns.var(&x)?).clone();
-                Ok(val)
+                match self.global_ns.var(&x) {
+                    Ok(ref value) => (*value).clone(),
+                    Err(e) => Value::Error(e),
+                }
             },
             Expr::Op(fun_call) => self.eval_call(fun_call),
-            _ => Err(EvalError::unimplemented("")),
+            _ => Value::Error(EvalError::unimplemented("")),
         }
     }
 
     /// Evaluates a function call.
-    fn eval_call(&mut self, call: FunCall) -> Result<Value> {
+    fn eval_call(&mut self, call: FunCall) -> Value {
         match call.code {
             OpCode::Add => self.acc_unnamed_op(call, |x, y| x+y),
-            x => Err(EvalError::unimplemented(
+            x => Value::Error(EvalError::unimplemented(
                 &format!("function \"{:?}\" is still unimplemented", x)
             )),
         }
@@ -87,14 +88,14 @@ impl EvalContext {
 
     /// Function that evaluates binary+ operators with no named operands
     fn acc_unnamed_op(&mut self, c: FunCall,
-                      func: fn(Value, Value) -> Value) -> Result<Value>
+                      func: fn(Value, Value) -> Value) -> Value
     {
         if !c.named_args.is_empty() {
-            Err(EvalError::invalid_arg(
+            Value::Error(EvalError::invalid_arg(
                 &format!("No named arguments allowed for `{:?}`", c.code)
             ))
         } else if c.ordered_args.len() < 2 {
-            Err(EvalError::invalid_arg(&format!(
+            Value::Error(EvalError::invalid_arg(&format!(
                 "Operator `{:?}` requires at least 2 operands", c.code
             )))
         } else {
@@ -104,8 +105,9 @@ impl EvalContext {
             );
 
             // evaluate arguments
+            // TODO move before this call
             for arg in c.ordered_args {
-                arg_values.push_back(self.eval(arg)?);
+                arg_values.push_back(self.eval(arg));
             }
             // calculate result
             let mut acc = 
@@ -116,7 +118,7 @@ impl EvalContext {
                 acc = func(acc, val);
             }
 
-            Ok(acc)
+            acc
         }
     }
 }

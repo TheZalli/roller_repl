@@ -21,7 +21,6 @@ pub enum OpCode {
     Assign, // =
 
     Dot, // .
-    Alternate, // |
     Dice, // d
 
     Error, // error
