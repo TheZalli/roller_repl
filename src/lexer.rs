@@ -11,7 +11,7 @@ macro_rules! wrap_token_rule_fun {
 }
 
 // regex string and token pairs
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 15] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 18] = [
     (r"\(", wrap_token_rule_fun!(|_| Token::LParen)),
     (r"\)", wrap_token_rule_fun!(|_| Token::RParen)),
     (r",", wrap_token_rule_fun!(|_| Token::Comma)),
@@ -29,11 +29,15 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 15] = [
     (r"\.", wrap_token_rule_fun!(|_| Token::Op(OpCode::Dot))),
     // TODO add other ops
 
+    (r"none", wrap_token_rule_fun!(|_| Token::None)),
+    (r"true", wrap_token_rule_fun!(|_| Token::Bool(true))),
+    (r"false", wrap_token_rule_fun!(|_| Token::Bool(false))),
+
     (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?", wrap_token_rule_fun!(
         |s| Token::Num(Ratio::from_f64(f64::from_str(s).unwrap()).unwrap())
     )),
-    (r#"".*?[^\\]""#, wrap_token_rule_fun!(|s| Token::Str(s))),
-    (r"[\pL_][\pL\pN_]*", wrap_token_rule_fun!(|s| Token::Id(s))),
+    (r#"".*?[^\\]""#, wrap_token_rule_fun!(|s| Token::Str(s.to_owned()))),
+    (r"[\pL_][\pL\pN_]*", wrap_token_rule_fun!(|s| Token::Id(s.to_owned()))),
 ];
 
 lazy_static! {
@@ -45,6 +49,7 @@ pub struct Lexer {
     token_rules: Vec<(Regex, &'static Fn(&str) -> Token)>,
 }
 
+#[derive(Clone)]
 pub struct LexerIter<'a, 'b: 'a> {
     lexer: &'a Lexer,
     consumed: usize,
@@ -52,7 +57,7 @@ pub struct LexerIter<'a, 'b: 'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Token<'a> {
+pub enum Token {
     LParen, // (
     RParen, // )
     Comma, // ,
@@ -60,9 +65,11 @@ pub enum Token<'a> {
     Alternate, // |
     Minus, // -, here because it can be unary or binary
     Op(OpCode),
+    None,
+    Bool(bool),
     Num(Ratio<i64>),
-    Str(&'a str),
-    Id(&'a str),
+    Str(String),
+    Id(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,12 +78,17 @@ pub enum LexError {
 }
 
 impl Lexer {
-    pub fn parse_iter<'a, 'b>(&'a self, input: &'b str) -> LexerIter<'a, 'b> {
+    fn parse_iter<'a, 'b>(&'a self, input: &'b str) -> LexerIter<'a, 'b> {
         LexerIter {
             lexer: self,
             consumed: 0,
             input: input,
         }
+    }
+    pub fn parse(&self, input: &str) ->
+        Result<Vec<(usize, Token, usize)>, LexError>
+    {
+        self.parse_iter(input).collect()
     }
 }
 
@@ -95,7 +107,7 @@ impl<'a> Default for Lexer {
 }
 
 impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
-    type Item = Result<(usize, Token<'b>, usize), LexError>;
+    type Item = Result<(usize, Token, usize), LexError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // strip left whitespace

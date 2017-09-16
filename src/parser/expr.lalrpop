@@ -1,10 +1,35 @@
 use std::str::FromStr;
 
+use num::rational::Ratio;
+
 use ast::*;
 use value::Value;
 use op::OpCode;
+use lexer::Token;
 
 grammar;
+
+extern {
+    enum Token {
+        "(" => Token::LParen,
+        ")" => Token::RParen,
+        "," => Token::Comma,
+        ":" => Token::Colon,
+        "|" => Token::Alternate,
+        "-" => Token::Minus,
+        "+" => Token::Op(OpCode::Add),
+        "*" => Token::Op(OpCode::Mul),
+        "/" => Token::Op(OpCode::Div),
+        "^" => Token::Op(OpCode::Exp),
+        "=" => Token::Op(OpCode::Assign),
+        "." => Token::Op(OpCode::Dot),
+        "none" => Token::None,
+        boolean => Token::Bool(<bool>),
+        num => Token::Num(<Ratio<i64>>),
+        string => Token::Str(<String>),
+        identifier => Token::Id(<String>),
+    }
+}
 
 // comma separated list of values with optional trailing comma
 comma<T>: Vec<T> = {
@@ -66,8 +91,8 @@ infix_op_4: Expr = tier<operator_4, value>;
 value: Expr = {
     term => Expr::Val(<>),
     identifier => Expr::Id(<>),
-    "List" "(" <comma<expr>> ")" => Expr::List(<>),
-    "Set" "(" <comma<expr>> ")" => Expr::Set(<>.into_iter().collect()),
+    //"List" "(" <comma<expr>> ")" => Expr::List(<>),
+    //"Set" "(" <comma<expr>> ")" => Expr::Set(<>.into_iter().collect()),
     <id: identifier> "(" <args: comma<expr>> ")" => Expr::Op(
         FunCall::new_with_args(OpCode::Id(id), vec![], args)
     ),
@@ -76,29 +101,8 @@ value: Expr = {
 
 term: Value = {
     "none" => Value::None,
-    "true" => Value::Bool(true),
-    "false" => Value::Bool(false),
-    num => <>.into(),
-};
-
-identifier: String = r"([\pL_][\pL\pN_]*)" => <>.to_owned();
-
-int: u64 = {
-    r"[0-9]+" => u64::from_str(<>).unwrap(),
-};
-
-float: f64 = {
-    // the reason this looks so scary is that we don't want to match integer 
-    // literals because that is an ambiguity and lalrpop match structure isn't 
-    // working.
-    // TODO fix
-    r"[0-9]+(\.[0-9]+|(\.[0-9]+)?[Ee][-+]?[0-9]+)" =>
-    f64::from_str(<>).unwrap(),
-};
-
-num: f64 = {
-    <i:int> => i as f64,
-    <f:float> => f,
+    boolean => Value::Bool(<>),
+    num => Value::Num(<>),
 };
 
 operator_1: OpCode = {

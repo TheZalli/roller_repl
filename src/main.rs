@@ -88,19 +88,19 @@ fn real_main() -> i32 {
                     // we might want to give a flag to supress this
                     println!("{}{}", prompt, input);
                 }
+                match lexer.parse(&input) {
+                    Ok(lexed) => {
+                        println!("Lexed: {:?}\n", lexed);
 
-                let lex_iter = lexer.parse_iter(&input);
-                let parse_res = expr::parse_expr(&input);
+                        let tokens = lexed.into_iter().map(|(_, x, _)| x);
+                        let parse_res = expr::parse_expr(tokens);
+                        println!("Parsed: {:?}\n", parse_res);
 
-                for t in lex_iter {
-                    print!("{:?}, ", t);
-                }
-                println!("");
-
-                println!("Parsed: {:?}", parse_res);
-
-                if let Ok(exp) = parse_res {
-                    println!("{}", env.eval_print(exp));
+                        if let Ok(exp) = parse_res {
+                            println!("Result: {}", env.eval_print(exp));
+                        }
+                    },
+                    Err(e) => println!("Lexing error: {:?}", e),
                 }
             },
 
