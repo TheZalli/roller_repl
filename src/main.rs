@@ -1,5 +1,7 @@
 #[cfg(unix)]
 extern crate libc;
+#[macro_use]
+extern crate lazy_static;
 
 extern crate rustyline;
 extern crate num;
@@ -18,6 +20,7 @@ use std::io::BufRead;
 
 use rustyline::error::ReadlineError;
 
+use lexer::Lexer;
 use parser::expr;
 use eval::Env;
 
@@ -54,7 +57,10 @@ fn real_main() -> i32 {
         println!("Interactive Roller REPL started");
     }
 
-    // the evaluation context holding the runtime data
+    // the lexer
+    let lexer = Lexer::default();
+
+    // the evaluation environment holding the runtime data
     let mut env = Env::new();
 
     // return value
@@ -83,8 +89,13 @@ fn real_main() -> i32 {
                     println!("{}{}", prompt, input);
                 }
 
-                let input = input.trim();
-                let parse_res = expr::parse_expr(input);
+                let lex_iter = lexer.parse_iter(&input);
+                let parse_res = expr::parse_expr(&input);
+
+                for t in lex_iter {
+                    print!("{:?}, ", t);
+                }
+                println!("");
 
                 println!("Parsed: {:?}", parse_res);
 
