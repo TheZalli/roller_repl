@@ -15,16 +15,17 @@ extern {
         "]" => Token::RBracket,
         "{" => Token::LBrace,
         "}" => Token::RBrace,
-        "," => Token::Comma,
-        ":" => Token::Colon,
-        "|" => Token::Alternate,
         "-" => Token::Minus,
+        "=" => Token::Op(OpCode::Equals),
         "+" => Token::Op(OpCode::Add),
         "*" => Token::Op(OpCode::Mul),
         "/" => Token::Op(OpCode::Div),
         "^" => Token::Op(OpCode::Pow),
-        "=" => Token::Op(OpCode::Assign),
-        "." => Token::Op(OpCode::Dot),
+        "." => Token::Dot,
+        ":=" => Token::Assign,
+        "," => Token::Comma,
+        ":" => Token::Colon,
+        "|" => Token::Alternate,
         "none" => Token::None,
         boolean => Token::Bool(<bool>),
         num => Token::Num(<Ratio<i64>>),
@@ -63,6 +64,7 @@ alt_pair: (Expr, Option<Expr>) = {
 
 pub expr: Expr = {
     infix_op_1 => <>,
+    <lhs: identifier> ":=" <e:expr> => Expr::Assign(lhs, Box::new(e)),
     <lhs: alt_pair> "|" <rhs: alt_pair> <list: ("|" <alt_pair>)*> => {
         // alternation that builds a distribution
         use std::collections::BTreeMap;
@@ -108,7 +110,7 @@ term: Value = {
 };
 
 operator_1: OpCode = {
-    "=" => OpCode::Assign,
+    "=" => OpCode::Equals,
 };
 
 operator_2: OpCode = {

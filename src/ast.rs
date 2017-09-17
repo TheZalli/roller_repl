@@ -13,6 +13,8 @@ pub enum Expr {
     Val(Value),
     /// Identifier reference
     Id(IdType),
+    /// Variable assignment
+    Assign(IdType, Box<Expr>),
     /// Function call.
     /// Also applies operators since they are built-in functions.
     Op(FunCall),

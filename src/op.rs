@@ -18,9 +18,8 @@ pub enum OpCode {
     Div,
     Pow,
 
-    Assign, // =
+    Equals,
 
-    Dot, // .
     Dice, // d
 
     Error, // error

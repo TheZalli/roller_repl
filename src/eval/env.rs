@@ -72,6 +72,12 @@ impl Env {
                 }
             },
             Expr::Op(fun_call) => self.eval_call(fun_call),
+            Expr::Assign(id, expr) => {
+                // assign a value and return it
+                let val = self.eval(*expr);
+                self.global_ns.insert(id, val.clone());
+                val
+            }
             _ => Value::Error(EvalError::unimplemented("")),
         }
     }
