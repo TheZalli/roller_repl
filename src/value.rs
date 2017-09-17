@@ -43,7 +43,22 @@ impl Value {
     impl_op!("addition", add, ops::Add::add);
     impl_op!("substraction", sub, ops::Sub::sub);
     impl_op!("multiplication", mul, ops::Mul::mul);
-    impl_op!("division", div, ops::Div::div);
+    
+    pub fn div(&self, rhs: &Value) -> Value {
+        match (self, rhs) {
+            (&Value::Num(x), &Value::Num(y)) => {
+                if y.to_integer() == 0 {
+                    return Value::Error(
+                        EvalError::arithm_error("division by zero")
+                    )
+                }
+                (x / y).into()
+            },
+            _ => Value::Error(EvalError::unsupported_op(
+                "division is not supported between these types"
+            ))
+        }
+    }
 
     pub fn pow(&self, rhs: &Value) -> Value {
         match (self, rhs) {

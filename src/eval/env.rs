@@ -82,6 +82,7 @@ impl Env {
         let vals = call.ordered_args.into_iter()
             .map(|e| self.eval(e)).collect();
 
+        // binary ops
         let acc_op = |code: OpCode, operands: Vec<Value>,
                       func: fn(&Value, &Value) -> Value| -> Value
             {
