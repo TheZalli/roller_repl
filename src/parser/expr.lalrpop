@@ -11,6 +11,10 @@ extern {
     enum Token {
         "(" => Token::LParen,
         ")" => Token::RParen,
+        "[" => Token::LBracket,
+        "]" => Token::RBracket,
+        "{" => Token::LBrace,
+        "}" => Token::RBrace,
         "," => Token::Comma,
         ":" => Token::Colon,
         "|" => Token::Alternate,
@@ -89,8 +93,8 @@ infix_op_4: Expr = tier<operator_4, value>;
 value: Expr = {
     term => Expr::Val(<>),
     identifier => Expr::Id(<>),
-    //"List" "(" <comma<expr>> ")" => Expr::List(<>),
-    //"Set" "(" <comma<expr>> ")" => Expr::Set(<>.into_iter().collect()),
+    "[" <comma<expr>> "]" => Expr::List(<>),
+    "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
     <id: identifier> "(" <args: comma<expr>> ")" => Expr::Op(
         FunCall::new_with_args(OpCode::Id(id), vec![], args)
     ),

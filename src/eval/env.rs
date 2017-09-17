@@ -83,7 +83,7 @@ impl Env {
             .map(|e| self.eval(e)).collect();
 
         let acc_op = |code: OpCode, operands: Vec<Value>,
-                      func: fn(Value, Value) -> Value| -> Value
+                      func: fn(&Value, &Value) -> Value| -> Value
             {
                 if operands.len() < 2 {
                     Value::Error(EvalError::invalid_arg(&format!(
@@ -95,11 +95,11 @@ impl Env {
 
                     // calculate result
                     let mut acc = 
-                        func(arg_values.pop_front().unwrap(),
-                            arg_values.pop_front().unwrap());
+                        func(&arg_values.pop_front().unwrap(),
+                            &arg_values.pop_front().unwrap());
                     
                     for val in arg_values {
-                        acc = func(acc, val);
+                        acc = func(&acc, &val);
                     }
 
                     acc
@@ -107,11 +107,11 @@ impl Env {
             };
         
         match call.code {
-            OpCode::Add => acc_op(call.code, vals, |x, y| x+y),
-            OpCode::Sub => acc_op(call.code, vals, |x, y| x-y),
-            OpCode::Mul => acc_op(call.code, vals, |x, y| x*y),
-            OpCode::Div => acc_op(call.code, vals, |x, y| x/y),
-            OpCode::Pow => acc_op(call.code, vals, |x, y| x.pow(&y)),
+            OpCode::Add => acc_op(call.code, vals, Value::add),
+            OpCode::Sub => acc_op(call.code, vals, Value::sub),
+            OpCode::Mul => acc_op(call.code, vals, Value::mul),
+            OpCode::Div => acc_op(call.code, vals, Value::div),
+            OpCode::Pow => acc_op(call.code, vals, Value::pow),
             x => Value::Error(EvalError::unimplemented(
                 &format!("function `{:?}` is still unimplemented", x)
             )),

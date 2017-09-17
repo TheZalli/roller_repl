@@ -11,9 +11,14 @@ macro_rules! wrap_token_rule_fun {
 }
 
 // regex string and token pairs
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 18] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 22] = [
     (r"\(", wrap_token_rule_fun!(|_| Token::LParen)),
     (r"\)", wrap_token_rule_fun!(|_| Token::RParen)),
+    (r"\[", wrap_token_rule_fun!(|_| Token::LBracket)),
+    (r"\]", wrap_token_rule_fun!(|_| Token::RBracket)),
+    (r"\{", wrap_token_rule_fun!(|_| Token::LBrace)),
+    (r"\}", wrap_token_rule_fun!(|_| Token::RBrace)),
+
     (r",", wrap_token_rule_fun!(|_| Token::Comma)),
     (r":", wrap_token_rule_fun!(|_| Token::Colon)),
     (r"\|", wrap_token_rule_fun!(|_| Token::Alternate)),
@@ -60,6 +65,10 @@ pub struct LexerIter<'a, 'b: 'a> {
 pub enum Token {
     LParen, // (
     RParen, // )
+    LBracket, // [
+    RBracket, // ]
+    LBrace, // {
+    RBrace, // }
     Comma, // ,
     Colon, // :
     Alternate, // |

@@ -26,9 +26,26 @@ pub enum Value {
     Error(EvalError),
 }
 
+macro_rules! impl_op {
+    ($name:expr, $fun_name:ident, $called_fun:path) => (
+        pub fn $fun_name(&self, rhs: &Value) -> Value {
+            match (self, rhs) {
+                (&Value::Num(x), &Value::Num(y)) => $called_fun(x, y).into(),
+                _ => Value::Error(EvalError::unsupported_op(&format!(
+                    "{} is not supported between these types", $name
+                )))
+            }
+        }
+    )
+}
+
 impl Value {
+    impl_op!("addition", add, ops::Add::add);
+    impl_op!("substraction", sub, ops::Sub::sub);
+    impl_op!("multiplication", mul, ops::Mul::mul);
+    impl_op!("division", div, ops::Div::div);
+
     pub fn pow(&self, rhs: &Value) -> Value {
-        use std::cmp;
         match (self, rhs) {
             (&Value::Num(a), &Value::Num(b)) =>
                 if *b.denom() == 1 &&
@@ -64,27 +81,6 @@ impl fmt::Display for Value {
         }
     }
 }
-
-macro_rules! impl_op {
-    ($op:path, $fun:ident, $name:expr) => (
-        impl $op for Value {
-            type Output = Value;
-            fn $fun(self, rhs: Value) -> Value {
-                match (self, rhs) {
-                    (Value::Num(x), Value::Num(y)) => x.$fun(y).into(),
-                    _ => Value::Error(EvalError::unsupported_op(&format!(
-                        "{} is not supported between these types", $name
-                    )))
-                }
-            }
-        }
-    )
-}
-
-impl_op!(ops::Add, add, "addition");
-impl_op!(ops::Sub, sub, "substraction");
-impl_op!(ops::Mul, mul, "multiplication");
-impl_op!(ops::Div, div, "division");
 
 impl From<i64> for Value {
     fn from(i: i64) -> Value {
