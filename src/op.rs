@@ -1,6 +1,6 @@
+use value::IdType;
 
-use value::{Value, IdType};
-
+#[allow(dead_code)] // TODO delete
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OpCode {
     Id(IdType),
@@ -16,7 +16,7 @@ pub enum OpCode {
     Sub,
     Mul,
     Div,
-    Exp,
+    Pow,
 
     Assign, // =
 

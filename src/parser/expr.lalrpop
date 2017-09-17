@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use num::rational::Ratio;
 
 use ast::*;
@@ -20,7 +18,7 @@ extern {
         "+" => Token::Op(OpCode::Add),
         "*" => Token::Op(OpCode::Mul),
         "/" => Token::Op(OpCode::Div),
-        "^" => Token::Op(OpCode::Exp),
+        "^" => Token::Op(OpCode::Pow),
         "=" => Token::Op(OpCode::Assign),
         "." => Token::Op(OpCode::Dot),
         "none" => Token::None,
@@ -120,5 +118,5 @@ operator_3: OpCode = {
 };
 
 operator_4: OpCode = {
-    "^" => OpCode::Exp,
+    "^" => OpCode::Pow,
 };

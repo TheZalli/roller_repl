@@ -9,6 +9,7 @@ pub struct EvalError {
     message: String,
 }
 
+#[allow(dead_code)] // TODO delete
 impl EvalError {
     pub fn invalid_arg(msg: &str) -> Self {
         EvalError {
@@ -56,6 +57,7 @@ impl EvalError {
 
 // TODO: Implement display
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(dead_code)] // TODO delete
 pub enum EvalErrorKind {
     InvalidArgument,
     UnsupportedOperation,

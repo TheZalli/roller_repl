@@ -11,6 +11,7 @@ use error::EvalError;
 pub type IdType = String;
 
 /// A Roller value.
+#[allow(dead_code)] // TODO delete
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     None,
@@ -23,6 +24,29 @@ pub enum Value {
     Map(BTreeMap<Value, Value>),
     /// Evaluation-time error
     Error(EvalError),
+}
+
+impl Value {
+    pub fn pow(&self, rhs: &Value) -> Value {
+        use std::cmp;
+        match (self, rhs) {
+            (&Value::Num(a), &Value::Num(b)) =>
+                if *b.denom() == 1 &&
+                    *b.numer() <= i32::max_value() as i64 &&
+                    *b.numer() >= i32::min_value() as i64
+                {
+                    Value::Num(a.pow(*b.numer() as i32))
+                } else {
+                    // approximate
+                    let a = *a.numer() as f64 / *a.denom() as f64;
+                    let b = *b.numer() as f64 / *b.denom() as f64;
+                    a.powf(b).into()
+                },
+            _ => Value::Error(EvalError::unsupported_op(&format!(
+                "raising to power is not supported between these types"
+            ))),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -41,17 +65,26 @@ impl fmt::Display for Value {
     }
 }
 
-impl ops::Add for Value {
-    type Output = Value;
-    fn add(self, rhs: Value) -> Value {
-        match (self, rhs) {
-            (Value::Num(x), Value::Num(y)) => (x + y).into(),
-            _ => Value::Error(EvalError::unsupported_op(
-                "addition not supported between these types"
-            )) // TODO
+macro_rules! impl_op {
+    ($op:path, $fun:ident, $name:expr) => (
+        impl $op for Value {
+            type Output = Value;
+            fn $fun(self, rhs: Value) -> Value {
+                match (self, rhs) {
+                    (Value::Num(x), Value::Num(y)) => x.$fun(y).into(),
+                    _ => Value::Error(EvalError::unsupported_op(&format!(
+                        "{} is not supported between these types", $name
+                    )))
+                }
+            }
         }
-    }
+    )
 }
+
+impl_op!(ops::Add, add, "addition");
+impl_op!(ops::Sub, sub, "substraction");
+impl_op!(ops::Mul, mul, "multiplication");
+impl_op!(ops::Div, div, "division");
 
 impl From<i64> for Value {
     fn from(i: i64) -> Value {

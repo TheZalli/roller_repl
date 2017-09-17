@@ -1,4 +1,4 @@
-use std::str::{FromStr, CharIndices};
+use std::str::FromStr;
 
 use regex::{Regex};
 use num::FromPrimitive;
@@ -22,7 +22,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 18] = [
     (r"\+", wrap_token_rule_fun!(|_| Token::Op(OpCode::Add))),
     (r"\*", wrap_token_rule_fun!(|_| Token::Op(OpCode::Mul))),
     (r"/", wrap_token_rule_fun!(|_| Token::Op(OpCode::Div))),
-    (r"\^", wrap_token_rule_fun!(|_| Token::Op(OpCode::Exp))),
+    (r"\^", wrap_token_rule_fun!(|_| Token::Op(OpCode::Pow))),
 
     (r"=", wrap_token_rule_fun!(|_| Token::Op(OpCode::Assign))),
 

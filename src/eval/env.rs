@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use error::{EvalError, Result};
 use ast::{Expr, FunCall};
@@ -78,47 +78,44 @@ impl Env {
 
     /// Evaluates a function call.
     fn eval_call(&mut self, call: FunCall) -> Value {
+        // evaluate arguments first
+        let vals = call.ordered_args.into_iter()
+            .map(|e| self.eval(e)).collect();
+
+        let acc_op = |code: OpCode, operands: Vec<Value>,
+                      func: fn(Value, Value) -> Value| -> Value
+            {
+                if operands.len() < 2 {
+                    Value::Error(EvalError::invalid_arg(&format!(
+                        "Operator `{:?}` requires at least 2 operands", code
+                    )))
+                } else {
+                    use std::collections::VecDeque;
+                    let mut arg_values: VecDeque<Value> = operands.into();
+
+                    // calculate result
+                    let mut acc = 
+                        func(arg_values.pop_front().unwrap(),
+                            arg_values.pop_front().unwrap());
+                    
+                    for val in arg_values {
+                        acc = func(acc, val);
+                    }
+
+                    acc
+                }
+            };
+        
         match call.code {
-            OpCode::Add => self.acc_unnamed_op(call, |x, y| x+y),
+            OpCode::Add => acc_op(call.code, vals, |x, y| x+y),
+            OpCode::Sub => acc_op(call.code, vals, |x, y| x-y),
+            OpCode::Mul => acc_op(call.code, vals, |x, y| x*y),
+            OpCode::Div => acc_op(call.code, vals, |x, y| x/y),
+            OpCode::Pow => acc_op(call.code, vals, |x, y| x.pow(&y)),
             x => Value::Error(EvalError::unimplemented(
-                &format!("function \"{:?}\" is still unimplemented", x)
+                &format!("function `{:?}` is still unimplemented", x)
             )),
         }
     }
 
-    /// Function that evaluates binary+ operators with no named operands
-    fn acc_unnamed_op(&mut self, c: FunCall,
-                      func: fn(Value, Value) -> Value) -> Value
-    {
-        if !c.named_args.is_empty() {
-            Value::Error(EvalError::invalid_arg(
-                &format!("No named arguments allowed for `{:?}`", c.code)
-            ))
-        } else if c.ordered_args.len() < 2 {
-            Value::Error(EvalError::invalid_arg(&format!(
-                "Operator `{:?}` requires at least 2 operands", c.code
-            )))
-        } else {
-            use std::collections::VecDeque;
-            let mut arg_values = VecDeque::with_capacity(
-                c.ordered_args.len()
-            );
-
-            // evaluate arguments
-            // TODO move before this call
-            for arg in c.ordered_args {
-                arg_values.push_back(self.eval(arg));
-            }
-            // calculate result
-            let mut acc = 
-                func(arg_values.pop_front().unwrap(),
-                     arg_values.pop_front().unwrap());
-            
-            for val in arg_values {
-                acc = func(acc, val);
-            }
-
-            acc
-        }
-    }
 }

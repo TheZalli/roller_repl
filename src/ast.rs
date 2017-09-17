@@ -3,9 +3,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use num::rational::Ratio;
-
-use error::EvalError;
 use value::{Value, IdType};
 use op::OpCode;
 
