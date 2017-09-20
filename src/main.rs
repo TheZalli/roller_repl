@@ -97,7 +97,7 @@ fn real_main() -> i32 {
                         println!("Parsed: {:?}\n", parse_res);
 
                         if let Ok(exp) = parse_res {
-                            println!("Result: {}", env.eval_print(&exp));
+                            println!("{}", env.eval_print(&exp));
                         }
                     },
                     Err(e) => println!("Lexing error: {:?}", e),

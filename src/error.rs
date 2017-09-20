@@ -69,6 +69,6 @@ pub enum EvalErrorKind {
 
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}: {}", self.kind, self.message)
+        write!(f, "{:?}, {}", self.kind, self.message)
     }
 }

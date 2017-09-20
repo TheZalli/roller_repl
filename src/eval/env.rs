@@ -53,61 +53,64 @@ impl Env {
 
     /// Evaluates the expression and returns a printable message.
     pub fn eval_print(&mut self, ast: &Expr) -> String {
-        let mut out = match ast {
-            &Expr::Assign(ref id, _) => format!("{} is now ", id),
-            &Expr::Id(ref id) => format!("{} is ", id),
-            _ => String::new(),
-        };
-        
-        let val = self.eval(ast);
+        match self.eval(ast) {
+            Ok(val) => {
+                // string representation of the value
+                let val_str = match val {
+                    Value::Num(x) if !x.is_integer() =>
+                        // non-integer numerals print differently
+                        format!(
+                            "{} (≈ {})", x,
+                            *x.numer() as f64 / *x.denom() as f64
+                        ),
+                    x => format!("{}", x),
+                };
 
-        if let Value::Error(e) = val {
-            return format!("Error: {}", e);
+                // print differently according to what we did at AST root
+                match ast {
+                    &Expr::Assign(ref id, _) =>
+                        format!("`{}` is now {}", id, val_str),
+                    &Expr::Id(ref id) => format!("`{}` is {}", id, val_str),
+                    _ => format!("Result: {}", val_str),
+                }
+            },
+            Err(e) => format!("Error: {}", e)
         }
-
-        out.push_str(&match val {
-            Value::Num(x) if !x.is_integer() =>
-                // non-integer numerals print differently
-                format!("{} ≈ {}", x, *x.numer() as f64 / *x.denom() as f64),
-            x => format!("{}", x),
-        });
         
-        out
     }
 
     /// Evaluates the expression and returns the resulting value.
-    pub fn eval(&mut self, expr: &Expr) -> Value {
+    pub fn eval(&mut self, expr: &Expr) -> Result<Value> {
         match expr {
-            &Expr::Val(ref x) => x.clone(),
-            &Expr::Id(ref x) => {
-                match self.global_ns.var(x) {
-                    Ok(ref value) => (*value).clone(),
-                    Err(e) => Value::Error(e),
-                }
-            },
+            &Expr::Val(ref x) => Ok(x.clone()),
+            &Expr::Id(ref x) => self.global_ns.var(x).map(|x| x.clone()),
             &Expr::Op(ref fun_call) => self.eval_call(fun_call),
             &Expr::Assign(ref id, ref expr) => {
                 // assign a value and return it
-                let val = self.eval(&*expr);
+                let val = self.eval(&*expr)?;
                 self.global_ns.insert(id.to_owned(), val.clone());
-                val
+                return Ok(val);
             }
-            _ => Value::Error(EvalError::unimplemented("")),
+            _ => Err(EvalError::unimplemented("")),
         }
     }
 
     /// Evaluates a function call.
-    fn eval_call(&mut self, call: &FunCall) -> Value {
+    fn eval_call(&mut self, call: &FunCall) -> Result<Value> {
         // evaluate arguments first
-        let vals = call.ordered_args.iter()
-            .map(|e| self.eval(e)).collect();
+        let mut vals = Vec::with_capacity(call.ordered_args.len());
+        
+        for expr in call.ordered_args.iter() {
+            vals.push(self.eval(expr)?);
+        }
 
         // binary ops
         let acc_op = |code: &OpCode, operands: Vec<Value>,
-                      func: fn(&Value, &Value) -> Value| -> Value
+                      func: fn(&Value, &Value) -> Result<Value>|
+                      -> Result<Value>
             {
                 if operands.len() < 2 {
-                    Value::Error(EvalError::invalid_arg(&format!(
+                    Err(EvalError::invalid_arg(&format!(
                         "Operator `{:?}` requires at least 2 operands", code
                     )))
                 } else {
@@ -117,13 +120,13 @@ impl Env {
                     // calculate result
                     let mut acc = 
                         func(&arg_values.pop_front().unwrap(),
-                            &arg_values.pop_front().unwrap());
+                            &arg_values.pop_front().unwrap())?;
                     
                     for val in arg_values {
-                        acc = func(&acc, &val);
+                        acc = func(&acc, &val)?;
                     }
 
-                    acc
+                    return Ok(acc);
                 }
             };
         
@@ -133,7 +136,7 @@ impl Env {
             &OpCode::Mul => acc_op(&call.code, vals, Value::mul),
             &OpCode::Div => acc_op(&call.code, vals, Value::div),
             &OpCode::Pow => acc_op(&call.code, vals, Value::pow),
-            x => Value::Error(EvalError::unimplemented(
+            x => Err(EvalError::unimplemented(
                 &format!("function `{:?}` is still unimplemented", x)
             )),
         }
