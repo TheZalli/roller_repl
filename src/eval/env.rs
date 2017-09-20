@@ -52,30 +52,44 @@ impl Env {
     }
 
     /// Evaluates the expression and returns a printable message.
-    pub fn eval_print(&mut self, ast: Expr) -> String {
-        match self.eval(ast) {
+    pub fn eval_print(&mut self, ast: &Expr) -> String {
+        let mut out = match ast {
+            &Expr::Assign(ref id, _) => format!("{} is now ", id),
+            &Expr::Id(ref id) => format!("{} is ", id),
+            _ => String::new(),
+        };
+        
+        let val = self.eval(ast);
+
+        if let Value::Error(e) = val {
+            return format!("Error: {}", e);
+        }
+
+        out.push_str(&match val {
             Value::Num(x) if !x.is_integer() =>
                 // non-integer numerals print differently
                 format!("{} ≈ {}", x, *x.numer() as f64 / *x.denom() as f64),
             x => format!("{}", x),
-        }
+        });
+        
+        out
     }
 
     /// Evaluates the expression and returns the resulting value.
-    pub fn eval(&mut self, expr: Expr) -> Value {
+    pub fn eval(&mut self, expr: &Expr) -> Value {
         match expr {
-            Expr::Val(x) => x,
-            Expr::Id(x) => {
-                match self.global_ns.var(&x) {
+            &Expr::Val(ref x) => x.clone(),
+            &Expr::Id(ref x) => {
+                match self.global_ns.var(x) {
                     Ok(ref value) => (*value).clone(),
                     Err(e) => Value::Error(e),
                 }
             },
-            Expr::Op(fun_call) => self.eval_call(fun_call),
-            Expr::Assign(id, expr) => {
+            &Expr::Op(ref fun_call) => self.eval_call(fun_call),
+            &Expr::Assign(ref id, ref expr) => {
                 // assign a value and return it
-                let val = self.eval(*expr);
-                self.global_ns.insert(id, val.clone());
+                let val = self.eval(&*expr);
+                self.global_ns.insert(id.to_owned(), val.clone());
                 val
             }
             _ => Value::Error(EvalError::unimplemented("")),
@@ -83,13 +97,13 @@ impl Env {
     }
 
     /// Evaluates a function call.
-    fn eval_call(&mut self, call: FunCall) -> Value {
+    fn eval_call(&mut self, call: &FunCall) -> Value {
         // evaluate arguments first
-        let vals = call.ordered_args.into_iter()
+        let vals = call.ordered_args.iter()
             .map(|e| self.eval(e)).collect();
 
         // binary ops
-        let acc_op = |code: OpCode, operands: Vec<Value>,
+        let acc_op = |code: &OpCode, operands: Vec<Value>,
                       func: fn(&Value, &Value) -> Value| -> Value
             {
                 if operands.len() < 2 {
@@ -113,12 +127,12 @@ impl Env {
                 }
             };
         
-        match call.code {
-            OpCode::Add => acc_op(call.code, vals, Value::add),
-            OpCode::Sub => acc_op(call.code, vals, Value::sub),
-            OpCode::Mul => acc_op(call.code, vals, Value::mul),
-            OpCode::Div => acc_op(call.code, vals, Value::div),
-            OpCode::Pow => acc_op(call.code, vals, Value::pow),
+        match &call.code {
+            &OpCode::Add => acc_op(&call.code, vals, Value::add),
+            &OpCode::Sub => acc_op(&call.code, vals, Value::sub),
+            &OpCode::Mul => acc_op(&call.code, vals, Value::mul),
+            &OpCode::Div => acc_op(&call.code, vals, Value::div),
+            &OpCode::Pow => acc_op(&call.code, vals, Value::pow),
             x => Value::Error(EvalError::unimplemented(
                 &format!("function `{:?}` is still unimplemented", x)
             )),

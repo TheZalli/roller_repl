@@ -19,14 +19,14 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
     (r"\{", wrap_token_rule_fun!(|_| Token::LBrace)),
     (r"\}", wrap_token_rule_fun!(|_| Token::RBrace)),
 
-    (r":=", wrap_token_rule_fun!(|_| Token::Assign)),
+    (r"=", wrap_token_rule_fun!(|_| Token::Assign)),
     (r"\.", wrap_token_rule_fun!(|_| Token::Dot)),
     (r",", wrap_token_rule_fun!(|_| Token::Comma)),
     (r":", wrap_token_rule_fun!(|_| Token::Colon)),
     (r"\|", wrap_token_rule_fun!(|_| Token::Alternate)),
     (r"-", wrap_token_rule_fun!(|_| Token::Minus)),
 
-    (r"=", wrap_token_rule_fun!(|_| Token::Op(OpCode::Equals))),
+    (r"==", wrap_token_rule_fun!(|_| Token::Op(OpCode::Equals))),
     (r"\+", wrap_token_rule_fun!(|_| Token::Op(OpCode::Add))),
     (r"\*", wrap_token_rule_fun!(|_| Token::Op(OpCode::Mul))),
     (r"/", wrap_token_rule_fun!(|_| Token::Op(OpCode::Div))),
@@ -71,7 +71,7 @@ pub enum Token {
     RBrace, // }
     Minus, // -, here because it can be unary or binary
     Op(OpCode),
-    Assign, // :=
+    Assign, // =
     Dot, // .
     Comma, // ,
     Colon, // :
