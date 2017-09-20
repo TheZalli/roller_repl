@@ -80,15 +80,31 @@ impl Value {
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        macro_rules! print_container {
+            ($start:expr, $iterator:expr, $end:expr) => ({
+                let mut it = $iterator;
+                write!(f, "{}", $start)?;
+                if let Some(val) = it.next() {
+                    // print first
+                    write!(f, "{}", val)?;
+                }
+                for val in it {
+                    // print rest
+                    write!(f, ", {}", val)?;
+                }
+                write!(f, "{}", $end)
+            })
+        }
+
         match self {
             &Value::None => write!(f, "none"),
             &Value::Num(x) => write!(f, "{}", x),
             &Value::Bool(x) => write!(f, "{}", x),
             &Value::Str(ref x) => write!(f, "{}", x),
             &Value::Func(ref x) => write!(f, "{:?}", x), // TODO impl Display
-            &Value::List(ref x) => write!(f, "{:?}", x), // ditto.
-            &Value::Set(ref x) => write!(f, "{:?}", x), // ditto.
-            &Value::Map(ref x) => write!(f, "{:?}", x), // ditto.
+            &Value::List(ref x) => print_container!("[", x.iter(), "]"),
+            &Value::Set(ref x) => print_container!("{", x.iter(), "}"),
+            &Value::Map(ref x) => write!(f, "{:?}", x), // TODO
         }
     }
 }

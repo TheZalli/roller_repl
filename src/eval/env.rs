@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeSet, BTreeMap};
 
 use error::{EvalError, Result};
 use ast::{Expr, FunCall};
@@ -90,7 +90,13 @@ impl Env {
                 let val = self.eval(&*expr)?;
                 self.global_ns.insert(id.to_owned(), val.clone());
                 return Ok(val);
-            }
+            },
+            &Expr::List(ref x) => Ok(Value::List(
+                x.iter().map(|x| self.eval(x)).collect::<Result<Vec<_>>>()?
+            )),
+            &Expr::Set(ref x) => Ok(Value::Set(
+                x.iter().map(|x| self.eval(x)).collect::<Result<BTreeSet<_>>>()?
+            )),
             _ => Err(EvalError::unimplemented("")),
         }
     }
