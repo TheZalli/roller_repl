@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use regex::{Regex};
+use regex::{Regex, RegexSet};
 use num::FromPrimitive;
 use num::rational::Ratio;
 
@@ -51,6 +51,7 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct Lexer {
+    regex_set: RegexSet,
     token_rules: Vec<(Regex, &'static Fn(&str) -> Token)>,
 }
 
@@ -105,13 +106,18 @@ impl Lexer {
 
 impl<'a> Default for Lexer {
     fn default() -> Self {
+        // read the data from DEFAULT_TOKEN_RULES
+        let mut regexes = Vec::with_capacity(DEFAULT_TOKEN_RULES.len());
         let mut rules = Vec::with_capacity(DEFAULT_TOKEN_RULES.len());
         for &(ref s, ref tok_fn) in DEFAULT_TOKEN_RULES.iter() {
-            let re = Regex::new(&format!("^({})", s)).unwrap();
+            let wrapped_re = format!("^({})", s);
+            let re = Regex::new(&wrapped_re).unwrap();
+            regexes.push(wrapped_re);
             rules.push((re, *tok_fn));
         }
 
         Lexer {
+            regex_set: RegexSet::new(regexes).unwrap(),
             token_rules: rules,
         }
     }
@@ -130,25 +136,30 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
             return None;
         }
 
-        for &(ref re, ref token_fn) in self.lexer.token_rules.iter() {
-            let opt_ma = re.find(self.input);
-            match opt_ma {
-                Some(m) => {
-                    // found match, take from start and return
-                    self.input = &self.input[m.end()..];
-                    let offs = self.consumed;
-                    self.consumed += m.end();
-                    return Some(Ok((
-                        offs + m.start(),
-                        token_fn(m.as_str()),
-                        offs + m.end()
-                    )));
-                },
-                // this regex didn't match try next
-                None => continue,
-            }
+        for found_index in self.lexer.regex_set.matches(self.input) {
+            // found a match, now extract it since regex set can't do that
+            let &(ref regex, ref tok_fun) = 
+                &self.lexer.token_rules[found_index];
+            
+            let ma = regex.find(self.input).unwrap();
+
+            // store previous used bytes
+            let offset = self.consumed;
+            // chop off used bytes
+            self.input = &self.input[ma.end()..];
+            // record chopped off bytes
+            self.consumed += ma.end();
+
+            // return the matched token
+            return Some(Ok((
+                offset + ma.start(),
+                tok_fun(ma.as_str()),
+                offset + ma.end()
+            )));
+            // other matches are ignored, if they even exist
         }
-        // none matched
+
+        // no rule matched
         self.input = ""; // stop on next iteration
         Some(Err(LexError::InvalidToken))
     }
