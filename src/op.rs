@@ -17,10 +17,19 @@ pub enum OpCode {
     Mul,
     Div,
     Pow,
+}
 
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CompOp {
+    /// `=`
     Equals,
-
-    Dice, // d
-
-    Error, // error
+    /// `<`
+    Lt,
+    /// `<=`
+    Lte,
+    /// `>`
+    Gt,
+    /// `>=`
+    Gte,
 }

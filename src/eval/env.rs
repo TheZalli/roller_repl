@@ -79,7 +79,7 @@ impl Env {
                     &Expr::Assign(ref id, _) =>
                         format!("`{}` is now {}", id, val_str),
                     &Expr::Id(ref id) => format!("`{}` is {}", id, val_str),
-                    _ => format!("Result: {}", val_str),
+                    _ => format!("{}", val_str),
                 }
             },
             Err(e) => format!("Error: {}", e)

@@ -39,15 +39,10 @@ macro_rules! impl_op {
 }
 
 impl Value {
-    /// Unescapes a double quoted string literal.
-    /// 
-    /// Panics if the argument string isn't surrounded by double quotes (`"`),
-    /// or if the last character before double quotes is backslash (`\`).
+    /// Unescapes a double quoted string value.
     pub fn new_string(s: &str) -> Self {
         let mut out_str = String::new();
-
-        // chop off double quotes
-        let mut char_iter = s[1..s.len()-1].chars();
+        let mut char_iter = s.chars();
 
         // iterate over all characters
         while let Some(ch) = char_iter.next()  {

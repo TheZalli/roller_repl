@@ -2,7 +2,7 @@ use num::rational::Ratio;
 
 use ast::*;
 use value::Value;
-use op::OpCode;
+use op::{OpCode, CompOp};
 use lexer::Token;
 
 grammar;
@@ -16,13 +16,21 @@ extern {
         "{" => Token::LBrace,
         "}" => Token::RBrace,
         "-" => Token::Minus,
-        "=" => Token::Op(OpCode::Equals),
+        "=" => Token::Equals,
+        "is" => Token::Compare,
+        "not" => Token::Not,
+        "<"  => Token::Comp(CompOp::Lt),
+        "<=" => Token::Comp(CompOp::Lte),
+        ">"  => Token::Comp(CompOp::Gt),
+        ">=" => Token::Comp(CompOp::Gte),
+        "and" => Token::Op(OpCode::And),
+        "or" => Token::Op(OpCode::Or),
+        "xor" => Token::Op(OpCode::Xor),
         "+" => Token::Op(OpCode::Add),
         "*" => Token::Op(OpCode::Mul),
         "/" => Token::Op(OpCode::Div),
         "^" => Token::Op(OpCode::Pow),
         "." => Token::Dot,
-        ":=" => Token::Assign,
         "," => Token::Comma,
         ":" => Token::Colon,
         "|" => Token::Alternate,
@@ -64,7 +72,17 @@ alt_pair: (Expr, Option<Expr>) = {
 
 pub expr: Expr = {
     tier_1_op => <>,
-    <lhs: identifier> ":=" <e:expr> => Expr::Assign(lhs, Box::new(e)),
+
+    <lhs: identifier> "=" <e: expr> => Expr::Assign(lhs, Box::new(e)),
+
+    "is" <inv: "not"?> <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
+        Expr::Comp {
+            inverse: inv.is_some(),
+            op: op,
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        },
+
     <lhs: alt_pair> "|" <rhs: alt_pair> <list: ("|" <alt_pair>)*> => {
         // alternation that builds a distribution
         use std::collections::BTreeMap;
@@ -117,8 +135,18 @@ term: Value = {
     string => Value::new_string(&<>),
 };
 
+comp_operator: CompOp = {
+    "=" => CompOp::Equals,
+    "<" => CompOp::Lt,
+    "<=" => CompOp::Lte,
+    ">" => CompOp::Gt,
+    ">=" => CompOp::Gte,
+};
+
 operator_1: OpCode = {
-    "=" => OpCode::Equals,
+    "and" => OpCode::And,
+    "or" => OpCode::Or,
+    "xor" => OpCode::Xor,
 };
 
 operator_2: OpCode = {

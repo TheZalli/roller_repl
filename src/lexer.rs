@@ -4,35 +4,44 @@ use regex::{Regex, RegexSet};
 use num::FromPrimitive;
 use num::rational::Ratio;
 
-use op::OpCode;
+use op::{OpCode, CompOp};
 
 macro_rules! wrap_token_rule_fun {
     ($e:expr) => (&($e))
 }
 
-// regex string and token pairs
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
+/// Regex rules for matching tokens and the functions to create them
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 31] = [
     (r"\(", wrap_token_rule_fun!(|_| Token::LParen)),
     (r"\)", wrap_token_rule_fun!(|_| Token::RParen)),
     (r"\[", wrap_token_rule_fun!(|_| Token::LBracket)),
     (r"\]", wrap_token_rule_fun!(|_| Token::RBracket)),
     (r"\{", wrap_token_rule_fun!(|_| Token::LBrace)),
     (r"\}", wrap_token_rule_fun!(|_| Token::RBrace)),
+    
+    (r"is", wrap_token_rule_fun!(|_| Token::Compare)),
+    (r"not", wrap_token_rule_fun!(|_| Token::Not)),
 
-    (r"==", wrap_token_rule_fun!(|_| Token::Op(OpCode::Equals))),
+    (r"=", wrap_token_rule_fun!(|_| Token::Equals)),
+    (r"<", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Lt))),
+    (r"<=", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Lte))),
+    (r">", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Gt))),
+    (r">=", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Gte))),
+
+    (r"and", wrap_token_rule_fun!(|_| Token::Op(OpCode::And))),
+    (r"or", wrap_token_rule_fun!(|_| Token::Op(OpCode::Or))),
+    (r"xor", wrap_token_rule_fun!(|_| Token::Op(OpCode::Xor))),
+
     (r"\+", wrap_token_rule_fun!(|_| Token::Op(OpCode::Add))),
     (r"\*", wrap_token_rule_fun!(|_| Token::Op(OpCode::Mul))),
     (r"/", wrap_token_rule_fun!(|_| Token::Op(OpCode::Div))),
     (r"\^", wrap_token_rule_fun!(|_| Token::Op(OpCode::Pow))),
 
-    (r"=", wrap_token_rule_fun!(|_| Token::Assign)),
     (r"\.", wrap_token_rule_fun!(|_| Token::Dot)),
     (r",", wrap_token_rule_fun!(|_| Token::Comma)),
     (r":", wrap_token_rule_fun!(|_| Token::Colon)),
     (r"\|", wrap_token_rule_fun!(|_| Token::Alternate)),
     (r"-", wrap_token_rule_fun!(|_| Token::Minus)),
-
-    // TODO add other ops
 
     (r"none", wrap_token_rule_fun!(|_| Token::None)),
     (r"true", wrap_token_rule_fun!(|_| Token::Bool(true))),
@@ -41,7 +50,9 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
     (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?", wrap_token_rule_fun!(
         |s| Token::Num(Ratio::from_f32(f32::from_str(s).unwrap()).unwrap())
     )),
-    (r#""(.*?[^\\])?""#, wrap_token_rule_fun!(|s| Token::Str(s.to_owned()))),
+    (r#""(.*?[^\\])?""#, wrap_token_rule_fun!(
+        |s| Token::Str(s[1..s.len()-1].to_owned())
+    )),
     (r"[\pL_][\pL\pN_]*", wrap_token_rule_fun!(|s| Token::Id(s.to_owned()))),
 ];
 
@@ -62,27 +73,54 @@ pub struct LexerIter<'a, 'b: 'a> {
     input: &'b str,
 }
 
+/// The types of tokens present in the script
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
-    LParen, // (
-    RParen, // )
-    LBracket, // [
-    RBracket, // ]
-    LBrace, // {
-    RBrace, // }
-    Minus, // -, here because it can be unary or binary
-    Assign, // =
+    /// `(`
+    LParen,
+    /// `)`
+    RParen,
+    /// `[`
+    LBracket,
+    /// `]`
+    RBracket,
+    /// `{`
+    LBrace,
+    /// `}`
+    RBrace,
+    /// `-`, here because it can be unary or binary
+    Minus,
+    /// `not`, here because it can be general keyword or boolean unary operation
+    Not,
+    /// `is`
+    Compare,
+    /// `=`
+    Equals,
+    /// Comparison operators, like `<`
+    Comp(CompOp),
+    /// Infix operators, like `+`
     Op(OpCode),
+    /// Piecewise infix operators, prefixed by a dot, like `.+`
     DotOp(OpCode),
+    /// Assignment operators, suffixed by an equals sign, like `+=`
     AssignOp(OpCode),
-    Dot, // .
-    Comma, // ,
-    Colon, // :
-    Alternate, // |
-    None, // none
+    /// `.`
+    Dot,
+    /// `,`
+    Comma,
+    /// `:`
+    Colon,
+    /// `|`
+    Alternate,
+    /// `none`
+    None,
+    /// Boolean value, `true` or `false`
     Bool(bool),
+    /// Numeral
     Num(Ratio<i32>),
+    /// String literal
     Str(String),
+    /// Identifier
     Id(String),
 }
 

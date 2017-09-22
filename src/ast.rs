@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use value::{Value, IdType};
-use op::OpCode;
+use op::{OpCode, CompOp};
 
 /// A Roller expression.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -17,6 +17,13 @@ pub enum Expr {
     Decl(Vec<(IdType, Value)>),
     /// Variable assignment
     Assign(IdType, Box<Expr>),
+    /// Comparison
+    Comp {
+        inverse: bool,
+        op: CompOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>
+    },
     /// Function call.
     /// Also applies operators since they are built-in functions.
     Op(FunCall),
