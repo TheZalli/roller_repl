@@ -15,7 +15,7 @@ pub type IdType = String;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     None,
-    Num(Ratio<i64>),
+    Num(Ratio<i32>),
     Bool(bool),
     Str(String),
     Func(FunDef),
@@ -39,10 +39,59 @@ macro_rules! impl_op {
 }
 
 impl Value {
+    /// Unescapes a double quoted string literal.
+    /// 
+    /// Panics if the argument string isn't surrounded by double quotes (`"`),
+    /// or if the last character before double quotes is backslash (`\`).
+    pub fn new_string(s: &str) -> Self {
+        let mut out_str = String::new();
+
+        // chop off double quotes
+        let mut char_iter = s[1..s.len()-1].chars();
+
+        // iterate over all characters
+        while let Some(ch) = char_iter.next()  {
+            match ch {
+                '\\' => {
+                    // get the escaped character
+                    match char_iter.next() {
+                        Some('\\') | None => out_str.push('\\'), // backspace
+                        Some('"') => out_str.push('"'),
+                        Some('n') => out_str.push('\n'), // line feed
+                        Some('r') => out_str.push('\r'), // carriage return
+                        Some('t') => out_str.push('\t'), // tab
+                        // TODO unicode escaping
+                        // if no escape worked, just push it like that
+                        Some(c) => out_str.push(c),
+                    }
+
+                },
+                // just print normal characters
+                _ => out_str.push(ch),
+            }
+        }
+
+        Value::Str(out_str)
+    }
+
+    /// Addition between types.
+    /// 
+    /// Only supported for numerals.
     impl_op!("addition", add, ops::Add::add);
+
+    /// Substraction between types.
+    /// 
+    /// Only supported for numerals.
     impl_op!("substraction", sub, ops::Sub::sub);
+    
+    /// Multiplication between types.
+    /// 
+    /// Only supported for numerals.
     impl_op!("multiplication", mul, ops::Mul::mul);
     
+    /// Division between types.
+    /// 
+    /// Only supported for numerals.
     pub fn div(&self, rhs: &Value) -> Result<Value> {
         match (self, rhs) {
             (&Value::Num(x), &Value::Num(y)) => {
@@ -56,19 +105,20 @@ impl Value {
             ))
         }
     }
-
+    
+    /// Raising value to the power of another.
+    /// 
+    /// Only supported for numerals.
     pub fn pow(&self, rhs: &Value) -> Result<Value> {
         match (self, rhs) {
             (&Value::Num(a), &Value::Num(b)) =>
-                if *b.denom() == 1 &&
-                    *b.numer() <= i32::max_value() as i64 &&
-                    *b.numer() >= i32::min_value() as i64
+                if *b.denom() == 1
                 {
-                    Ok(Value::Num(a.pow(*b.numer() as i32)))
+                    Ok(Value::Num(a.pow(*b.numer())))
                 } else {
                     // approximate
-                    let a = *a.numer() as f64 / *a.denom() as f64;
-                    let b = *b.numer() as f64 / *b.denom() as f64;
+                    let a = *a.numer() as f32 / *a.denom() as f32;
+                    let b = *b.numer() as f32 / *b.denom() as f32;
                     Ok(a.powf(b).into())
                 },
             _ => Err(EvalError::unsupported_op(&format!(
@@ -109,23 +159,23 @@ impl fmt::Display for Value {
     }
 }
 
-impl From<i64> for Value {
-    fn from(i: i64) -> Value {
+impl From<i32> for Value {
+    fn from(i: i32) -> Value {
         use num::FromPrimitive;
-        Value::Num(Ratio::from_i64(i).unwrap())
+        Value::Num(Ratio::from_i32(i).unwrap())
     }
 }
 
-impl From<f64> for Value {
-    fn from(f: f64) -> Value {
+impl From<f32> for Value {
+    fn from(f: f32) -> Value {
         use num::FromPrimitive;
         // TODO ?: remove unwrap
-        Value::Num(Ratio::from_f64(f).unwrap())
+        Value::Num(Ratio::from_f32(f).unwrap())
     }
 }
 
-impl From<Ratio<i64>> for Value {
-    fn from(r: Ratio<i64>) -> Value {
+impl From<Ratio<i32>> for Value {
+    fn from(r: Ratio<i32>) -> Value {
         Value::Num(r)
     }
 }

@@ -28,7 +28,7 @@ extern {
         "|" => Token::Alternate,
         "none" => Token::None,
         boolean => Token::Bool(<bool>),
-        num => Token::Num(<Ratio<i64>>),
+        num => Token::Num(<Ratio<i32>>),
         string => Token::Str(<String>),
         identifier => Token::Id(<String>),
     }
@@ -58,19 +58,19 @@ tier<Op, NextTier>: Expr = {
 colon_pair<T, U>: (T, U) = <T> ":" <U> => (<>, <>);
 
 alt_pair: (Expr, Option<Expr>) = {
-    <a:infix_op_1> => (a, None),
-    <a:infix_op_1> ":" <b:infix_op_1> => (a, Some(b)),
+    <a: tier_1_op> => (a, None),
+    <a: tier_1_op> ":" <b: tier_1_op> => (a, Some(b)),
 };
 
 pub expr: Expr = {
-    infix_op_1 => <>,
+    tier_1_op => <>,
     <lhs: identifier> ":=" <e:expr> => Expr::Assign(lhs, Box::new(e)),
     <lhs: alt_pair> "|" <rhs: alt_pair> <list: ("|" <alt_pair>)*> => {
         // alternation that builds a distribution
         use std::collections::BTreeMap;
         let mut distr = BTreeMap::new();
 
-        let one_expr = Expr::Val(1.0f64.into());
+        let one_expr = Expr::Val(1.0f32.into());
 
         // add left and right sides
         distr.insert(lhs.0, lhs.1.unwrap_or(one_expr.clone()));
@@ -87,10 +87,17 @@ pub expr: Expr = {
 };
 
 // precedence levels
-infix_op_1: Expr = tier<operator_1, infix_op_2>;
-infix_op_2: Expr = tier<operator_2, infix_op_3>;
-infix_op_3: Expr = tier<operator_3, infix_op_4>;
-infix_op_4: Expr = tier<operator_4, value>;
+tier_1_op: Expr = tier<operator_1, tier_2_op>;
+tier_2_op: Expr = tier<operator_2, tier_3_op>;
+tier_3_op: Expr = tier<operator_3, tier_4_op>;
+tier_4_op: Expr = tier<operator_4, tier_5_op>;
+
+tier_5_op: Expr = {
+    "-" <e: value> => Expr::Op(
+        FunCall::new_with_args(OpCode::Neg, vec![], vec![e])
+    ),
+    value => <>,
+};
 
 value: Expr = {
     term => Expr::Val(<>),
@@ -107,6 +114,7 @@ term: Value = {
     "none" => Value::None,
     boolean => Value::Bool(<>),
     num => Value::Num(<>),
+    string => Value::new_string(&<>),
 };
 
 operator_1: OpCode = {

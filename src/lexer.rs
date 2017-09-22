@@ -19,18 +19,18 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
     (r"\{", wrap_token_rule_fun!(|_| Token::LBrace)),
     (r"\}", wrap_token_rule_fun!(|_| Token::RBrace)),
 
+    (r"==", wrap_token_rule_fun!(|_| Token::Op(OpCode::Equals))),
+    (r"\+", wrap_token_rule_fun!(|_| Token::Op(OpCode::Add))),
+    (r"\*", wrap_token_rule_fun!(|_| Token::Op(OpCode::Mul))),
+    (r"/", wrap_token_rule_fun!(|_| Token::Op(OpCode::Div))),
+    (r"\^", wrap_token_rule_fun!(|_| Token::Op(OpCode::Pow))),
+
     (r"=", wrap_token_rule_fun!(|_| Token::Assign)),
     (r"\.", wrap_token_rule_fun!(|_| Token::Dot)),
     (r",", wrap_token_rule_fun!(|_| Token::Comma)),
     (r":", wrap_token_rule_fun!(|_| Token::Colon)),
     (r"\|", wrap_token_rule_fun!(|_| Token::Alternate)),
     (r"-", wrap_token_rule_fun!(|_| Token::Minus)),
-
-    (r"==", wrap_token_rule_fun!(|_| Token::Op(OpCode::Equals))),
-    (r"\+", wrap_token_rule_fun!(|_| Token::Op(OpCode::Add))),
-    (r"\*", wrap_token_rule_fun!(|_| Token::Op(OpCode::Mul))),
-    (r"/", wrap_token_rule_fun!(|_| Token::Op(OpCode::Div))),
-    (r"\^", wrap_token_rule_fun!(|_| Token::Op(OpCode::Pow))),
 
     // TODO add other ops
 
@@ -39,9 +39,9 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
     (r"false", wrap_token_rule_fun!(|_| Token::Bool(false))),
 
     (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?", wrap_token_rule_fun!(
-        |s| Token::Num(Ratio::from_f64(f64::from_str(s).unwrap()).unwrap())
+        |s| Token::Num(Ratio::from_f32(f32::from_str(s).unwrap()).unwrap())
     )),
-    (r#"".*?[^\\]""#, wrap_token_rule_fun!(|s| Token::Str(s.to_owned()))),
+    (r#""(.*?[^\\])?""#, wrap_token_rule_fun!(|s| Token::Str(s.to_owned()))),
     (r"[\pL_][\pL\pN_]*", wrap_token_rule_fun!(|s| Token::Id(s.to_owned()))),
 ];
 
@@ -71,15 +71,17 @@ pub enum Token {
     LBrace, // {
     RBrace, // }
     Minus, // -, here because it can be unary or binary
-    Op(OpCode),
     Assign, // =
+    Op(OpCode),
+    DotOp(OpCode),
+    AssignOp(OpCode),
     Dot, // .
     Comma, // ,
     Colon, // :
     Alternate, // |
-    None,
+    None, // none
     Bool(bool),
-    Num(Ratio<i64>),
+    Num(Ratio<i32>),
     Str(String),
     Id(String),
 }
@@ -90,7 +92,7 @@ pub enum LexError {
 }
 
 impl Lexer {
-    fn parse_iter<'a, 'b>(&'a self, input: &'b str) -> LexerIter<'a, 'b> {
+    pub fn parse_iter<'a, 'b>(&'a self, input: &'b str) -> LexerIter<'a, 'b> {
         LexerIter {
             lexer: self,
             consumed: 0,

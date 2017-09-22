@@ -13,6 +13,8 @@ pub enum Expr {
     Val(Value),
     /// Identifier reference
     Id(IdType),
+    /// Variable declaration
+    Decl(Vec<(IdType, Value)>),
     /// Variable assignment
     Assign(IdType, Box<Expr>),
     /// Function call.

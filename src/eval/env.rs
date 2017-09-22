@@ -63,6 +63,14 @@ impl Env {
                             "{} (≈ {})", x,
                             *x.numer() as f64 / *x.denom() as f64
                         ),
+                    Value::Str(s) =>
+                        // unescape and print
+                        format!("\"{}\"\nPrinted:\n{}",
+                            s.chars().map::<String, _>(
+                                |c| c.escape_debug().collect()
+                            ).collect::<String>(),
+                            s
+                        ),
                     x => format!("{}", x),
                 };
 
@@ -142,6 +150,19 @@ impl Env {
             &OpCode::Mul => acc_op(&call.code, vals, Value::mul),
             &OpCode::Div => acc_op(&call.code, vals, Value::div),
             &OpCode::Pow => acc_op(&call.code, vals, Value::pow),
+            &OpCode::Neg => {
+                if vals.len() != 1 {
+                    Err(EvalError::invalid_arg(&format!(
+                        "Negation requires exactly 1 operand"
+                    )))
+                } else if let Value::Num(x) = vals[0] {
+                    Ok(Value::Num(-x))
+                } else {
+                    Err(EvalError::invalid_arg(&format!(
+                        "Negation not supported for this type"
+                    )))
+                }
+            },
             x => Err(EvalError::unimplemented(
                 &format!("function `{:?}` is still unimplemented", x)
             )),
