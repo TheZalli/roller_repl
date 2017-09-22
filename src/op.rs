@@ -1,5 +1,6 @@
 use value::IdType;
 
+/// Operators
 #[allow(dead_code)] // TODO delete
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OpCode {
@@ -19,8 +20,8 @@ pub enum OpCode {
     Pow,
 }
 
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+/// Comparison operators
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CompOp {
     /// `=`
     Equals,

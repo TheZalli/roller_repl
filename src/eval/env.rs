@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, BTreeMap};
 use error::{EvalError, Result};
 use ast::{Expr, FunCall};
 use value::{Value, IdType};
-use op::OpCode;
+use op::{OpCode, CompOp};
 
 /// A namespace for variables.
 #[derive(Debug)]
@@ -105,6 +105,16 @@ impl Env {
             &Expr::Set(ref x) => Ok(Value::Set(
                 x.iter().map(|x| self.eval(x)).collect::<Result<BTreeSet<_>>>()?
             )),
+            &Expr::Comp { inverse, op, ref lhs, ref rhs } => {
+                let comp_bool = match op {
+                    CompOp::Equals => lhs == rhs,
+                    CompOp::Gt => lhs < rhs,
+                    CompOp::Gte => lhs <= rhs,
+                    CompOp::Lt => lhs > rhs,
+                    CompOp::Lte => lhs >= rhs,
+                };
+                Ok(Value::Bool(if inverse { !comp_bool } else { comp_bool }))
+            },
             _ => Err(EvalError::unimplemented("")),
         }
     }
