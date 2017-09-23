@@ -17,7 +17,7 @@ extern {
         "}" => Token::RBrace,
         "-" => Token::Minus,
         "=" => Token::Equals,
-        "is" => Token::Compare,
+        "is" => Token::Is,
         "not" => Token::Not,
         "<"  => Token::Comp(CompOp::Lt),
         "<=" => Token::Comp(CompOp::Lte),

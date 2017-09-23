@@ -6,54 +6,53 @@ use num::rational::Ratio;
 
 use op::{OpCode, CompOp};
 
-macro_rules! wrap_token_rule_fun {
-    ($e:expr) => (&($e))
-}
 
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 31] = [
-    (r"\(", wrap_token_rule_fun!(|_| Token::LParen)),
-    (r"\)", wrap_token_rule_fun!(|_| Token::RParen)),
-    (r"\[", wrap_token_rule_fun!(|_| Token::LBracket)),
-    (r"\]", wrap_token_rule_fun!(|_| Token::RBracket)),
-    (r"\{", wrap_token_rule_fun!(|_| Token::LBrace)),
-    (r"\}", wrap_token_rule_fun!(|_| Token::RBrace)),
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
+    (r"\(", &|_| Token::LParen),
+    (r"\)", &|_| Token::RParen),
+    (r"\[", &|_| Token::LBracket),
+    (r"\]", &|_| Token::RBracket),
+    (r"\{", &|_| Token::LBrace),
+    (r"\}", &|_| Token::RBrace),
+
+    (r"=", &|_| Token::Equals),
+    (r"<", &|_| Token::Comp(CompOp::Lt)),
+    (r"<=", &|_| Token::Comp(CompOp::Lte)),
+    (r">", &|_| Token::Comp(CompOp::Gt)),
+    (r">=", &|_| Token::Comp(CompOp::Gte)),
+
+    (r"\+", &|_| Token::Op(OpCode::Add)),
+    (r"\*", &|_| Token::Op(OpCode::Mul)),
+    (r"/", &|_| Token::Op(OpCode::Div)),
+    (r"\^", &|_| Token::Op(OpCode::Pow)),
+
+    (r"\.", &|_| Token::Dot),
+    (r",", &|_| Token::Comma),
+    (r":", &|_| Token::Colon),
+    (r"\|", &|_| Token::Alternate),
+    (r"-", &|_| Token::Minus),
+
+    // match numerals
+    (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?",
+        &|s| Token::Num(Ratio::from_f32(f32::from_str(s).unwrap()).unwrap())
+    ),
+
+    // match strings
+    (r#""(.*?[^\\])?""#, &|s| Token::Str(s[1..s.len()-1].to_owned())),
     
-    (r"is", wrap_token_rule_fun!(|_| Token::Compare)),
-    (r"not", wrap_token_rule_fun!(|_| Token::Not)),
-
-    (r"=", wrap_token_rule_fun!(|_| Token::Equals)),
-    (r"<", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Lt))),
-    (r"<=", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Lte))),
-    (r">", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Gt))),
-    (r">=", wrap_token_rule_fun!(|_| Token::Comp(CompOp::Gte))),
-
-    (r"and", wrap_token_rule_fun!(|_| Token::Op(OpCode::And))),
-    (r"or", wrap_token_rule_fun!(|_| Token::Op(OpCode::Or))),
-    (r"xor", wrap_token_rule_fun!(|_| Token::Op(OpCode::Xor))),
-
-    (r"\+", wrap_token_rule_fun!(|_| Token::Op(OpCode::Add))),
-    (r"\*", wrap_token_rule_fun!(|_| Token::Op(OpCode::Mul))),
-    (r"/", wrap_token_rule_fun!(|_| Token::Op(OpCode::Div))),
-    (r"\^", wrap_token_rule_fun!(|_| Token::Op(OpCode::Pow))),
-
-    (r"\.", wrap_token_rule_fun!(|_| Token::Dot)),
-    (r",", wrap_token_rule_fun!(|_| Token::Comma)),
-    (r":", wrap_token_rule_fun!(|_| Token::Colon)),
-    (r"\|", wrap_token_rule_fun!(|_| Token::Alternate)),
-    (r"-", wrap_token_rule_fun!(|_| Token::Minus)),
-
-    (r"none", wrap_token_rule_fun!(|_| Token::None)),
-    (r"true", wrap_token_rule_fun!(|_| Token::Bool(true))),
-    (r"false", wrap_token_rule_fun!(|_| Token::Bool(false))),
-
-    (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?", wrap_token_rule_fun!(
-        |s| Token::Num(Ratio::from_f32(f32::from_str(s).unwrap()).unwrap())
-    )),
-    (r#""(.*?[^\\])?""#, wrap_token_rule_fun!(
-        |s| Token::Str(s[1..s.len()-1].to_owned())
-    )),
-    (r"[\pL_][\pL\pN_]*", wrap_token_rule_fun!(|s| Token::Id(s.to_owned()))),
+    // match identifiers and keywords
+    (r"[\pL_][\pL\pN_]*", &|s| match s {
+        "is" => Token::Is,
+        "not" => Token::Not,
+        "and" => Token::Op(OpCode::And),
+        "or" => Token::Op(OpCode::Or),
+        "xor" => Token::Op(OpCode::Xor),
+        "none" => Token::None,
+        "true" => Token::Bool(true),
+        "false" => Token::Bool(false),
+        _ => Token::Id(s.to_owned()),
+    }),
 ];
 
 lazy_static! {
@@ -93,7 +92,7 @@ pub enum Token {
     /// `not`, here because it can be general keyword or boolean unary operation
     Not,
     /// `is`
-    Compare,
+    Is,
     /// `=`
     Equals,
     /// Comparison operators, like `<`
