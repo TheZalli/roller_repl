@@ -14,7 +14,7 @@ pub enum Expr {
     /// Identifier reference
     Id(IdType),
     /// Variable declaration
-    Decl(Vec<(IdType, Value)>),
+    Decl(IdType, Box<Expr>),
     /// Variable assignment
     Assign(IdType, Box<Expr>),
     /// Comparison

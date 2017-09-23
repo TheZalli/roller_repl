@@ -145,6 +145,8 @@ pub enum Token {
     Str(String),
     /// Identifier
     Id(String),
+    /// End of line
+    Eol
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

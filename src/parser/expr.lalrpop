@@ -72,16 +72,9 @@ alt_pair: (Expr, Option<Expr>) = {
 
 pub expr: Expr = {
     tier_1_op => <>,
+    statement => <>,
 
-    <lhs: identifier> "=" <e: expr> => Expr::Assign(lhs, Box::new(e)),
-
-    "is" <inv: "not"?> <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
-        Expr::Comp {
-            inverse: inv.is_some(),
-            op: op,
-            lhs: Box::new(lhs),
-            rhs: Box::new(rhs),
-        },
+    "is" <e: comp_expr> => <>,
 
     <lhs: alt_pair> "|" <rhs: alt_pair> <list: ("|" <alt_pair>)*> => {
         // alternation that builds a distribution
@@ -102,6 +95,11 @@ pub expr: Expr = {
         // return distribution
         Expr::Distribution(distr)
     },
+};
+
+statement: Expr = {
+    <id: identifier> "is" <e: tier_1_op> => Expr::Decl(id, Box::new(e)),
+    <lhs: identifier> "=" <e: expr> => Expr::Assign(lhs, Box::new(e)),
 };
 
 // precedence levels
@@ -162,3 +160,12 @@ operator_3: OpCode = {
 operator_4: OpCode = {
     "^" => OpCode::Pow,
 };
+
+comp_expr: Expr =
+    <inv: "not"?> <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
+        Expr::Comp {
+            inverse: inv.is_some(),
+            op: op,
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        };
