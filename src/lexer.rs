@@ -43,7 +43,6 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
     
     // match identifiers and keywords
     (r"[\pL_][\pL\pN_]*", &|s| match s {
-        "is" => Token::Is,
         "not" => Token::Not,
         "and" => Token::Op(OpCode::And),
         "or" => Token::Op(OpCode::Or),
@@ -51,6 +50,20 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
         "none" => Token::None,
         "true" => Token::Bool(true),
         "false" => Token::Bool(false),
+        "is" => Token::Is,
+        "in" => Token::In,
+        "if" => Token::If,
+        "then" => Token::Then,
+        "else" => Token::Else,
+        "return" => Token::Return,
+        "break" => Token::Break,
+        "continue" => Token::Continue,
+        "loop" => Token::Loop,
+        "while" => Token::While,
+        "for" => Token::For,
+        "try" => Token::Try,
+        "catch" => Token::Catch,
+        "throw" => Token::Throw,
         _ => Token::Id(s.to_owned()),
     }),
 ];
@@ -89,10 +102,8 @@ pub enum Token {
     RBrace,
     /// `-`, here because it can be unary or binary
     Minus,
-    /// `not`, here because it can be general keyword or boolean unary operation
+    /// Here because it can be a general keyword or a boolean unary operation
     Not,
-    /// `is`
-    Is,
     /// `=`
     Equals,
     /// Comparison operators, like `<`
@@ -111,7 +122,20 @@ pub enum Token {
     Colon,
     /// `|`
     Alternate,
-    /// `none`
+    Is,
+    In,
+    If,
+    Then,
+    Else,
+    Return,
+    Break,
+    Continue,
+    Loop,
+    While,
+    For,
+    Try,
+    Catch,
+    Throw,
     None,
     /// Boolean value, `true` or `false`
     Bool(bool),
