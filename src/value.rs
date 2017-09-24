@@ -69,6 +69,17 @@ impl Value {
         Value::Str(out_str)
     }
 
+    
+    /// Perform negation operation for one numeral value.
+    pub fn neg(&self) -> Result<Value> {
+        match self {
+            &Value::Num(a) => Ok(Value::Num(-a)),
+            _ => Err(EvalError::unsupported_op(
+                "negation is not supported for this type"
+            ))
+        }
+    }
+
     /// Addition between types.
     /// 
     /// Only supported for numerals.
@@ -116,9 +127,49 @@ impl Value {
                     let b = *b.numer() as f32 / *b.denom() as f32;
                     Ok(a.powf(b).into())
                 },
-            _ => Err(EvalError::unsupported_op(&format!(
+            _ => Err(EvalError::unsupported_op(
                 "raising to power is not supported between these types"
-            ))),
+            )),
+        }
+    }
+
+    /// Perform logical `not` operation for one boolean value.
+    pub fn not(&self) -> Result<Value> {
+        match self {
+            &Value::Bool(a) => Ok(Value::Bool(!a)),
+            _ => Err(EvalError::unsupported_op(
+                "not operation is not supported for this type"
+            ))
+        }
+    }
+
+    /// Perform logical `and` operation between two boolean values.
+    pub fn and(&self, rhs: &Value) -> Result<Value> {
+        match (self, rhs) {
+            (&Value::Bool(a), &Value::Bool(b)) => Ok(Value::Bool(a && b)),
+            _ => Err(EvalError::unsupported_op(
+                "boolean operators are not supported between these types"
+            ))
+        }
+    }
+
+    /// Perform logical `or` operation between two boolean values.
+    pub fn or(&self, rhs: &Value) -> Result<Value> {
+        match (self, rhs) {
+            (&Value::Bool(a), &Value::Bool(b)) => Ok(Value::Bool(a || b)),
+            _ => Err(EvalError::unsupported_op(
+                "boolean operators are not supported between these types"
+            ))
+        }
+    }
+
+    /// Perform logical `xor` operation between two boolean values.
+    pub fn xor(&self, rhs: &Value) -> Result<Value> {
+        match (self, rhs) {
+            (&Value::Bool(a), &Value::Bool(b)) => Ok(Value::Bool(a ^ b)),
+            _ => Err(EvalError::unsupported_op(
+                "boolean operators are not supported between these types"
+            ))
         }
     }
 }

@@ -157,24 +157,30 @@ impl Env {
             };
         
         match &call.code {
+            &OpCode::Not =>
+                if vals.len() != 1 {
+                    Err(EvalError::invalid_arg(&format!(
+                        "Not-operation requires exactly 1 operand"
+                    )))
+                } else {
+                    vals[0].not()
+                },
+            &OpCode::And => acc_op(&call.code, vals, Value::and),
+            &OpCode::Or  => acc_op(&call.code, vals, Value::or),
+            &OpCode::Xor => acc_op(&call.code, vals, Value::xor),
+            &OpCode::Neg =>
+                if vals.len() != 1 {
+                    Err(EvalError::invalid_arg(&format!(
+                        "Negation requires exactly 1 operand"
+                    )))
+                } else {
+                    vals[0].neg()
+                },
             &OpCode::Add => acc_op(&call.code, vals, Value::add),
             &OpCode::Sub => acc_op(&call.code, vals, Value::sub),
             &OpCode::Mul => acc_op(&call.code, vals, Value::mul),
             &OpCode::Div => acc_op(&call.code, vals, Value::div),
             &OpCode::Pow => acc_op(&call.code, vals, Value::pow),
-            &OpCode::Neg => {
-                if vals.len() != 1 {
-                    Err(EvalError::invalid_arg(&format!(
-                        "Negation requires exactly 1 operand"
-                    )))
-                } else if let Value::Num(x) = vals[0] {
-                    Ok(Value::Num(-x))
-                } else {
-                    Err(EvalError::invalid_arg(&format!(
-                        "Negation not supported for this type"
-                    )))
-                }
-            },
             x => Err(EvalError::unimplemented(
                 &format!("function `{:?}` is still unimplemented", x)
             )),
