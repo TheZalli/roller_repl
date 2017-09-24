@@ -105,17 +105,17 @@ impl Env {
             &Expr::Set(ref x) => Ok(Value::Set(
                 x.iter().map(|x| self.eval(x)).collect::<Result<BTreeSet<_>>>()?
             )),
-            &Expr::Comp { inverse, op, ref lhs, ref rhs } => {
+            &Expr::Comp { op, ref lhs, ref rhs } => {
                 let lhs = self.eval(lhs)?;
                 let rhs = self.eval(rhs)?;
-                let comp_bool = match op {
+                Ok(Value::Bool(match op {
                     CompOp::Equals => lhs == rhs,
+                    CompOp::Nequals => lhs != rhs,
                     CompOp::Lt => lhs < rhs,
                     CompOp::Lte => lhs <= rhs,
                     CompOp::Gt => lhs > rhs,
                     CompOp::Gte => lhs >= rhs,
-                };
-                Ok(Value::Bool(if inverse { !comp_bool } else { comp_bool }))
+                }))
             },
             _ => Err(EvalError::unimplemented("")),
         }

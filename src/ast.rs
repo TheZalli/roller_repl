@@ -19,7 +19,6 @@ pub enum Expr {
     Assign(IdType, Box<Expr>),
     /// Comparison
     Comp {
-        inverse: bool,
         op: CompOp,
         lhs: Box<Expr>,
         rhs: Box<Expr>

@@ -8,7 +8,7 @@ use op::{OpCode, CompOp};
 
 
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 24] = [
     (r"\(", &|_| Token::LParen),
     (r"\)", &|_| Token::RParen),
     (r"\[", &|_| Token::LBracket),
@@ -17,6 +17,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 23] = [
     (r"\}", &|_| Token::RBrace),
 
     (r"=", &|_| Token::Equals),
+    (r"!=", &|_| Token::Comp(CompOp::Nequals)),
     (r"<", &|_| Token::Comp(CompOp::Lt)),
     (r"<=", &|_| Token::Comp(CompOp::Lte)),
     (r">", &|_| Token::Comp(CompOp::Gt)),

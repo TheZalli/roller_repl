@@ -16,9 +16,10 @@ extern {
         "{" => Token::LBrace,
         "}" => Token::RBrace,
         "-" => Token::Minus,
-        "=" => Token::Equals,
         "is" => Token::Is,
         "not" => Token::Not,
+        "=" => Token::Equals,
+        "!=" => Token::Comp(CompOp::Nequals),
         "<"  => Token::Comp(CompOp::Lt),
         "<=" => Token::Comp(CompOp::Lte),
         ">"  => Token::Comp(CompOp::Gt),
@@ -112,6 +113,9 @@ tier_5_op: Expr = {
     "-" <e: value> => Expr::Op(
         FunCall::new_with_args(OpCode::Neg, vec![], vec![e])
     ),
+    "not" <e: value> => Expr::Op(
+        FunCall::new_with_args(OpCode::Not, vec![], vec![e])
+    ),
     value => <>,
 };
 
@@ -135,6 +139,7 @@ term: Value = {
 
 comp_operator: CompOp = {
     "=" => CompOp::Equals,
+    "!=" => CompOp::Nequals,
     "<" => CompOp::Lt,
     "<=" => CompOp::Lte,
     ">" => CompOp::Gt,
@@ -162,9 +167,8 @@ operator_4: OpCode = {
 };
 
 comp_expr: Expr =
-    <inv: "not"?> <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
+    <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
         Expr::Comp {
-            inverse: inv.is_some(),
             op: op,
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),

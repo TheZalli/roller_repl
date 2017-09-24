@@ -25,6 +25,8 @@ pub enum OpCode {
 pub enum CompOp {
     /// `=`
     Equals,
+    /// `!=`
+    Nequals,
     /// `<`
     Lt,
     /// `<=`
