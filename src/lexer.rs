@@ -8,13 +8,15 @@ use op::{OpCode, CompOp};
 
 
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 24] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 25] = [
     (r"\(", &|_| Token::LParen),
     (r"\)", &|_| Token::RParen),
     (r"\[", &|_| Token::LBracket),
     (r"\]", &|_| Token::RBracket),
     (r"\{", &|_| Token::LBrace),
     (r"\}", &|_| Token::RBrace),
+
+    (r"->", &|_| Token::RightArrow),
 
     (r"=", &|_| Token::Equals),
     (r"!=", &|_| Token::Comp(CompOp::Nequals)),
@@ -48,9 +50,6 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 24] = [
         "and" => Token::Op(OpCode::And),
         "or" => Token::Op(OpCode::Or),
         "xor" => Token::Op(OpCode::Xor),
-        "none" => Token::None,
-        "true" => Token::Bool(true),
-        "false" => Token::Bool(false),
         "is" => Token::Is,
         "in" => Token::In,
         "if" => Token::If,
@@ -65,6 +64,10 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 24] = [
         "try" => Token::Try,
         "catch" => Token::Catch,
         "throw" => Token::Throw,
+        "fn" => Token::Fn,
+        "none" => Token::None,
+        "true" => Token::Bool(true),
+        "false" => Token::Bool(false),
         _ => Token::Id(s.to_owned()),
     }),
 ];
@@ -123,6 +126,8 @@ pub enum Token {
     Colon,
     /// `|`
     Alternate,
+    /// `->`
+    RightArrow,
     Is,
     In,
     If,
@@ -137,6 +142,7 @@ pub enum Token {
     Try,
     Catch,
     Throw,
+    Fn,
     None,
     /// Boolean value, `true` or `false`
     Bool(bool),
@@ -146,8 +152,8 @@ pub enum Token {
     Str(String),
     /// Identifier
     Id(String),
-    /// End of line
-    Eol
+    // / End of line
+    //Eol
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

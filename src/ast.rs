@@ -101,9 +101,3 @@ impl FunCall {
         }
     }
 }
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FunDef {
-    code: OpCode,
-    // TODO
-}

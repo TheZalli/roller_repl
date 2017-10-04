@@ -1,7 +1,7 @@
 use num::rational::Ratio;
 
 use ast::*;
-use value::Value;
+use value::{Value, FunDef};
 use op::{OpCode, CompOp};
 use lexer::Token;
 
@@ -15,6 +15,7 @@ extern {
         "]" => Token::RBracket,
         "{" => Token::LBrace,
         "}" => Token::RBrace,
+        "->" => Token::RightArrow,
         "-" => Token::Minus,
         "is" => Token::Is,
         "not" => Token::Not,
@@ -35,6 +36,7 @@ extern {
         "," => Token::Comma,
         ":" => Token::Colon,
         "|" => Token::Alternate,
+        "fn" => Token::Fn,
         "none" => Token::None,
         boolean => Token::Bool(<bool>),
         num => Token::Num(<Ratio<i32>>),
@@ -124,6 +126,11 @@ value: Expr = {
     identifier => Expr::Id(<>),
     "[" <comma<expr>> "]" => Expr::List(<>),
     "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
+    "fn" "(" <args: comma<identifier>> ")" "->" "(" <body: expr> ")" =>
+        Expr::Val(Value::Func(FunDef {
+            arg_names: args,
+            body: Box::new(body),
+        })),
     <id: identifier> "(" <args: comma<expr>> ")" => Expr::Op(
         FunCall::new_with_args(OpCode::Id(id), vec![], args)
     ),

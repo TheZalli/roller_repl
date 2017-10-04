@@ -4,7 +4,7 @@ use std::collections::{BTreeSet, BTreeMap};
 
 use num::rational::Ratio;
 
-use ast::*;
+use ast::Expr;
 use error::{EvalError, Result};
 
 // Type of the identifier strings.
@@ -15,13 +15,19 @@ pub type IdType = String;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     None,
-    Num(Ratio<i32>),
     Bool(bool),
+    Num(Ratio<i32>),
     Str(String),
-    Func(FunDef),
     List(Vec<Value>),
     Set(BTreeSet<Value>),
     Map(BTreeMap<Value, Value>),
+    Func(FunDef),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FunDef {
+    pub arg_names: Vec<IdType>,
+    pub body: Box<Expr>,
 }
 
 macro_rules! impl_op {
@@ -68,7 +74,6 @@ impl Value {
 
         Value::Str(out_str)
     }
-
     
     /// Perform negation operation for one numeral value.
     pub fn neg(&self) -> Result<Value> {
