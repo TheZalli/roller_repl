@@ -65,12 +65,13 @@ tier<Op, NextTier>: Expr = {
     NextTier
 };
 
-// a pair separated by a colon
-colon_pair<T, U>: (T, U) = <T> ":" <U> => (<>, <>);
-
 alt_pair: (Expr, Option<Expr>) = {
     <a: tier_1_op> => (a, None),
     <a: tier_1_op> ":" <b: tier_1_op> => (a, Some(b)),
+};
+
+map_pair: (Expr, Expr) = {
+    <a: tier_1_op> ":" <b: tier_1_op> => (a, b),
 };
 
 pub expr: Expr = {
@@ -126,7 +127,8 @@ value: Expr = {
     identifier => Expr::Id(<>),
     "[" <comma<expr>> "]" => Expr::List(<>),
     "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
-    "fn" "(" <args: comma<identifier>> ")" "->" "(" <body: expr> ")" =>
+    //"{" <comma<map_pair>> "}" => Expr::Map(<>.into_iter().collect()),
+    "fn" "{" <args: comma<identifier>> "->" <body: expr> "}" =>
         Expr::Val(Value::Func(FunDef {
             arg_names: args,
             body: Box::new(body),
