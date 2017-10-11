@@ -35,6 +35,7 @@ extern {
         "." => Token::Dot,
         "," => Token::Comma,
         ":" => Token::Colon,
+        ";" => Token::Semicolon,
         "|" => Token::Alternate,
         "fn" => Token::Fn,
         "none" => Token::None,
@@ -45,9 +46,9 @@ extern {
     }
 }
 
-// comma separated list of values with optional trailing comma
-comma<T>: Vec<T> = {
-    <v:(<T> ",")*> <e:T?> => match e {
+// a separated list with custom separator and optional trailing end separator
+sep_list<T, S>: Vec<T> = {
+    <v:(<T> S)*> <e:T?> => match e {
         None => v,
         Some(e) => {
             let mut v = v;
@@ -57,6 +58,18 @@ comma<T>: Vec<T> = {
     }
 };
 
+// like sep_list, but needs atleast 1 item and doesn't allow trailing separator
+sep_list_plus<T, S>: Vec<T> = {
+    <v:(<T> S)*> <e: T> => {
+        let mut v = v;
+        v.push(e);
+        v
+    }
+};
+
+// comma separated list of values with optional trailing comma
+comma<T>: Vec<T> = sep_list<T, ",">;
+
 // expression tier, used for operator precedence
 tier<Op, NextTier>: Expr = {
     <lhs: tier<Op, NextTier>> <op: Op> <rhs: NextTier> => Expr::Op(
@@ -65,40 +78,11 @@ tier<Op, NextTier>: Expr = {
     NextTier
 };
 
-alt_pair: (Expr, Option<Expr>) = {
-    <a: tier_1_op> => (a, None),
-    <a: tier_1_op> ":" <b: tier_1_op> => (a, Some(b)),
-};
-
-map_pair: (Expr, Expr) = {
-    <a: tier_1_op> ":" <b: tier_1_op> => (a, b),
-};
-
 pub expr: Expr = {
     tier_1_op => <>,
     statement => <>,
 
-    "is" <e: comp_expr> => <>,
-
-    <lhs: alt_pair> "|" <rhs: alt_pair> <list: ("|" <alt_pair>)*> => {
-        // alternation that builds a distribution
-        use std::collections::BTreeMap;
-        let mut distr = BTreeMap::new();
-
-        let one_expr = Expr::Val(1.0f32.into());
-
-        // add left and right sides
-        distr.insert(lhs.0, lhs.1.unwrap_or(one_expr.clone()));
-        distr.insert(rhs.0, rhs.1.unwrap_or(one_expr.clone()));
-
-        // add the rest
-        for (exp, opt_weight) in list {
-            distr.insert(exp, opt_weight.unwrap_or(one_expr.clone()));
-        }
-
-        // return distribution
-        Expr::Distribution(distr)
-    },
+    "is" <e: comp_expr> => e,
 };
 
 statement: Expr = {
@@ -122,12 +106,27 @@ tier_5_op: Expr = {
     value => <>,
 };
 
+map_pair: (Expr, Expr) = {
+    <a: expr> ":" <b: expr> => (a, b),
+};
+
+alt_item: (Expr, Expr) = {
+    //<map_pair> => <>,
+    <expr> => (<>, Expr::Val(1.0f32.into())),
+};
+
 value: Expr = {
     term => Expr::Val(<>),
     identifier => Expr::Id(<>),
+
     "[" <comma<expr>> "]" => Expr::List(<>),
-    "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
-    //"{" <comma<map_pair>> "}" => Expr::Map(<>.into_iter().collect()),
+    //"{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
+    "{" <comma<map_pair>> "}" => Expr::Map(<>.into_iter().collect()),
+
+    // alternation that builds a distribution
+    "{" <list: sep_list_plus<alt_item, "|">> "}" =>
+        Expr::Distribution(list.into_iter().collect()),
+
     "fn" "{" <args: comma<identifier>> "->" <body: expr> "}" =>
         Expr::Val(Value::Func(FunDef {
             arg_names: args,

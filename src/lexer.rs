@@ -8,7 +8,7 @@ use op::{OpCode, CompOp};
 
 
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 25] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 26] = [
     (r"\(", &|_| Token::LParen),
     (r"\)", &|_| Token::RParen),
     (r"\[", &|_| Token::LBracket),
@@ -33,6 +33,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 25] = [
     (r"\.", &|_| Token::Dot),
     (r",", &|_| Token::Comma),
     (r":", &|_| Token::Colon),
+    (r";", &|_| Token::Semicolon),
     (r"\|", &|_| Token::Alternate),
     (r"-", &|_| Token::Minus),
 
@@ -124,6 +125,8 @@ pub enum Token {
     Comma,
     /// `:`
     Colon,
+    /// `;`
+    Semicolon,
     /// `|`
     Alternate,
     /// `->`

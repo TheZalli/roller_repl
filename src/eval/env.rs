@@ -105,6 +105,11 @@ impl Env {
             &Expr::Set(ref x) => Ok(Value::Set(
                 x.iter().map(|x| self.eval(x)).collect::<Result<BTreeSet<_>>>()?
             )),
+            &Expr::Map(ref x) => Ok(Value::Map(
+                x.iter().map(
+                    |(k, v)| Ok((self.eval(k)?, self.eval(v)?))
+                ).collect::<Result<BTreeMap<_, _>>>()?
+            )),
             &Expr::Comp { op, ref lhs, ref rhs } => {
                 let lhs = self.eval(lhs)?;
                 let rhs = self.eval(rhs)?;
