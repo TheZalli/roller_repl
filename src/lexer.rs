@@ -65,7 +65,6 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 26] = [
         "try" => Token::Try,
         "catch" => Token::Catch,
         "throw" => Token::Throw,
-        "fun" => Token::Fun,
         "none" => Token::None,
         "true" => Token::Bool(true),
         "false" => Token::Bool(false),
@@ -145,7 +144,6 @@ pub enum Token {
     Try,
     Catch,
     Throw,
-    Fun,
     None,
     /// Boolean value, `true` or `false`
     Bool(bool),
