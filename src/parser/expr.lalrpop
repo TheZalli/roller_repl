@@ -37,7 +37,7 @@ extern {
         ":" => Token::Colon,
         ";" => Token::Semicolon,
         "|" => Token::Alternate,
-        "fn" => Token::Fn,
+        "fun" => Token::Fun,
         "none" => Token::None,
         boolean => Token::Bool(<bool>),
         num => Token::Num(<Ratio<i32>>),
@@ -58,7 +58,7 @@ sep_list<T, S>: Vec<T> = {
     }
 };
 
-// like sep_list, but needs atleast 1 item and doesn't allow trailing separator
+// like sep_list, but needs at least 1 item and doesn't allow trailing separator
 sep_list_plus<T, S>: Vec<T> = {
     <v:(<T> S)*> <e: T> => {
         let mut v = v;
@@ -69,6 +69,9 @@ sep_list_plus<T, S>: Vec<T> = {
 
 // comma separated list of values with optional trailing comma
 comma<T>: Vec<T> = sep_list<T, ",">;
+
+// comma separated list of values without trailing comma and at least 1 item
+comma_plus<T>: Vec<T> = sep_list_plus<T, ",">;
 
 // expression tier, used for operator precedence
 tier<Op, NextTier>: Expr = {
@@ -120,14 +123,18 @@ value: Expr = {
     identifier => Expr::Id(<>),
 
     "[" <comma<expr>> "]" => Expr::List(<>),
-    //"{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
-    "{" <comma<map_pair>> "}" => Expr::Map(<>.into_iter().collect()),
+    "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
+    "{" ":" "}" => Expr::Map(vec![].into_iter().collect()), // empty map
+    "{" <comma_plus<map_pair>> "}" => Expr::Map(<>.into_iter().collect()),
 
     // alternation that builds a distribution
-    "{" <list: sep_list_plus<alt_item, "|">> "}" =>
-        Expr::Distribution(list.into_iter().collect()),
+    "{" <a: alt_item> "|" <list: sep_list_plus<alt_item, "|">> "}" => {
+        let mut v = list;
+        v.push(a);
+        Expr::Distribution(v.into_iter().collect())
+    },
 
-    "fn" "{" <args: comma<identifier>> "->" <body: expr> "}" =>
+    "fun" "{" <args: comma<identifier>> "->" <body: expr> "}" =>
         Expr::Val(Value::Func(FunDef {
             arg_names: args,
             body: Box::new(body),

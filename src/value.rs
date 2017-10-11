@@ -205,9 +205,16 @@ impl fmt::Display for Value {
             &Value::Func(ref x) => write!(f, "{:?}", x), // TODO impl Display
             &Value::List(ref x) => print_container!("[", x.iter(), "]"),
             &Value::Set(ref x) => print_container!("{", x.iter(), "}"),
-            &Value::Map(ref x) => print_container!("{",
-                x.iter().map(|(k, v)| format!("{}:{}", k, v)),
-            "}"),
+            &Value::Map(ref x) => {
+                if x.is_empty() {
+                    // otherwise empty set is the same as empty map
+                    write!(f, "{{:}}")
+                } else {
+                    print_container!("{",
+                    x.iter().map(|(k, v)| format!("{}:{}", k, v)),
+                    "}")
+                }
+            },
         }
     }
 }
