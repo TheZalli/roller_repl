@@ -45,7 +45,7 @@ fn real_main() -> i32 {
         out_isatty = true;
     };
 
-    let prompt = "> ";
+    let prompt = "» ";
 
     // rustyline input & output
     let mut rl = rustyline::Editor::<()>::new();

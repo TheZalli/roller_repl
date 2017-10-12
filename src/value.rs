@@ -21,6 +21,7 @@ pub enum Value {
     List(Vec<Value>),
     Set(BTreeSet<Value>),
     Map(BTreeMap<Value, Value>),
+    Distribution(BTreeMap<Expr, u32>),
     Func(FunDef),
 }
 
@@ -182,7 +183,7 @@ impl Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         macro_rules! print_container {
-            ($start:expr, $iterator:expr, $end:expr) => ({
+            ($start:expr, $iterator:expr, $separator:expr, $end:expr) => ({
                 let mut it = $iterator;
                 write!(f, "{}", $start)?;
                 if let Some(val) = it.next() {
@@ -191,7 +192,7 @@ impl fmt::Display for Value {
                 }
                 for val in it {
                     // print rest
-                    write!(f, ", {}", val)?;
+                    write!(f, "{} {}", $separator, val)?;
                 }
                 write!(f, "{}", $end)
             })
@@ -203,8 +204,8 @@ impl fmt::Display for Value {
             &Value::Bool(x) => write!(f, "{}", x),
             &Value::Str(ref x) => write!(f, "{:?}", x),
             &Value::Func(ref x) => write!(f, "{:?}", x), // TODO impl Display
-            &Value::List(ref x) => print_container!("[", x.iter(), "]"),
-            &Value::Set(ref x) => print_container!("{", x.iter(), "}"),
+            &Value::List(ref x) => print_container!("[", x.iter(), ",", "]"),
+            &Value::Set(ref x) => print_container!("{", x.iter(), ",", "}"),
             &Value::Map(ref x) =>
                 if x.is_empty() {
                     // otherwise empty set is the same as empty map
@@ -212,7 +213,17 @@ impl fmt::Display for Value {
                 } else {
                     print_container!("{",
                         x.iter().map(|(k, v)| format!("{}:{}", k, v)),
-                    "}")
+                    ",", "}")
+                },
+            // TODO
+            &Value::Distribution(ref x) =>
+                if x.is_empty() {
+                    write!(f, "{{|}}")
+                } else {
+                    // TODO implement display for expressions
+                    print_container!("{",
+                        x.iter().map(|(k, v)| format!("{:?}:{}", k, v)),
+                    "|", "}")
                 },
         }
     }

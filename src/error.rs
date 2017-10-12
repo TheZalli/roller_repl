@@ -9,42 +9,35 @@ pub struct EvalError {
     message: String,
 }
 
+macro_rules! impl_err_kind_builder {
+    ($fun_name:ident, $kind:ident) => {
+        pub fn $fun_name(msg: &str) -> Self {
+            EvalError {
+                kind: EvalErrorKind::$kind,
+                message: msg.to_owned(),
+            }
+        }
+    };
+    ($fun_name:ident, $kind:ident, $msg_func:expr) => {
+        pub fn $fun_name(input: &str) -> Self {
+            EvalError {
+                kind: EvalErrorKind::$kind,
+                message: $msg_func(input),
+            }
+        }
+    }
+}
+
 #[allow(dead_code)] // TODO delete
 impl EvalError {
-    pub fn invalid_arg(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::InvalidArgument,
-            message: msg.to_owned(),
-        }
-    }
-
-    pub fn unsupported_op(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::UnsupportedOperation,
-            message: msg.to_owned(),
-        }
-    }
-
-    pub fn arithm_error(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::ArithmeticError,
-            message: msg.to_owned(),
-        }
-    }
-
-    pub fn var_not_found(id: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::VariableNotFound,
-            message: format!("variable `{}` not found", id),
-        }
-    }
-
-    pub fn unimplemented(msg: &str) -> Self {
-        EvalError {
-            kind: EvalErrorKind::Unimplemented,
-            message: msg.to_owned(),
-        }
-    }
+    impl_err_kind_builder!(invalid_arg, InvalidArgument);
+    impl_err_kind_builder!(unsupported_op, UnsupportedOperation);
+    impl_err_kind_builder!(arithm_error, ArithmeticError);
+    impl_err_kind_builder!(var_not_found, VariableNotFound,
+        |id| format!("variable `{}` not found", id)
+    );
+    impl_err_kind_builder!(unexpected_type, UnexpectedType);
+    impl_err_kind_builder!(unimplemented, Unimplemented);
 
     pub fn custom(custom_kind: &str, msg: &str) -> Self {
         EvalError {
@@ -63,6 +56,7 @@ pub enum EvalErrorKind {
     UnsupportedOperation,
     ArithmeticError,
     VariableNotFound,
+    UnexpectedType,
     Unimplemented,
     Custom(String),
 }

@@ -110,6 +110,33 @@ impl Env {
                     |(k, v)| Ok((self.eval(k)?, self.eval(v)?))
                 ).collect::<Result<BTreeMap<_, _>>>()?
             )),
+            &Expr::Distribution(ref distr_map) => {
+                // the output
+                let mut out_map = BTreeMap::new();
+
+                for (item, weight_expr) in distr_map.iter() {
+                    // the evaluated weight value
+                    let val = self.eval(weight_expr)?;
+
+                    if let Value::Num(x) = val {
+                        if x.is_integer() && *x.numer() > 0 {
+                            // insert the weight value as u32 to output
+                            out_map.insert(item.clone(), *x.numer() as u32);
+                        } else {
+                            return Err(EvalError::unexpected_type(&format!(
+                                "Expected a positive (>0) 32-bit unsigned \
+                                integer value as the weight, got value {}", val
+                            )));
+                        }
+                    } else {
+                        return Err(EvalError::unexpected_type(&format!(
+                            "Expected numeral weight value, got value {}", val
+                        )));
+                    }
+                }
+                // return value
+                Ok(Value::Distribution(out_map))
+            },
             &Expr::Comp { op, ref lhs, ref rhs } => {
                 let lhs = self.eval(lhs)?;
                 let rhs = self.eval(rhs)?;
