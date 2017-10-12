@@ -32,7 +32,7 @@ pub enum Expr {
     Map(BTreeMap<Expr, Expr>),
     /// Control structures.
     Ctrl(Control),
-    Distribution(BTreeMap<Expr, Expr>),
+    Distribution(Vec<(Expr, Expr)>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

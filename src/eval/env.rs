@@ -112,16 +112,24 @@ impl Env {
             )),
             &Expr::Distribution(ref distr_map) => {
                 // the output
-                let mut out_map = BTreeMap::new();
+                let mut out_map = BTreeMap::<Expr, u32>::new();
 
-                for (item, weight_expr) in distr_map.iter() {
+                for &(ref item, ref weight_expr) in distr_map.iter() {
                     // the evaluated weight value
                     let val = self.eval(weight_expr)?;
 
                     if let Value::Num(x) = val {
-                        if x.is_integer() && *x.numer() > 0 {
-                            // insert the weight value as u32 to output
-                            out_map.insert(item.clone(), *x.numer() as u32);
+                        let weight = *x.numer();
+                        if x.is_integer() && weight > 0 {
+                            use std::collections::btree_map::Entry::*;
+
+                            let weight = weight as u32;
+                            // insert or update the weight value
+                            match out_map.entry(item.clone()) {
+                                Vacant(x) => { x.insert(weight); },
+                                Occupied(ref mut x) =>
+                                    *(x.get_mut()) += weight,
+                            }
                         } else {
                             return Err(EvalError::unexpected_type(&format!(
                                 "Expected a positive (>0) 32-bit unsigned \
