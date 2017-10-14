@@ -71,34 +71,22 @@ pub enum Control {
 pub struct FunCall {
     /// Name of the function or the operator.
     pub code: OpCode,
-    /// List of argument names.
-    pub names: Vec<IdType>,
     /// The vector of the ordered arguments.
-    pub ordered_args: Vec<Expr>,
+    pub args: Vec<Expr>,
     /// The vector of named arguments.
-    pub named_args: Vec<(IdType, Expr)>,
+    pub kw_args: Vec<(IdType, Expr)>,
 }
 
 impl FunCall {
-    pub fn new(code: OpCode, argument_names: Vec<IdType>) -> Self {
-        FunCall {
-            code: code,
-            names: argument_names,
-            ordered_args: Vec::new(),
-            named_args: Vec::new(),
-        }
-    }
-
-    pub fn new_with_args(code: OpCode,
-                         argument_names: Vec<IdType>,
-                         exprs: Vec<Expr>)
+    pub fn new(code: OpCode,
+                         args: Vec<Expr>,
+                         kw_args: Vec<(IdType, Expr)>)
                          -> Self
     {
         FunCall {
             code: code,
-            names: argument_names,
-            ordered_args: exprs,
-            named_args: Vec::new(),
+            args: args,
+            kw_args: kw_args,
         }
     }
 }

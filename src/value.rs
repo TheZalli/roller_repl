@@ -212,7 +212,7 @@ impl fmt::Display for Value {
             &Value::None => write!(f, "none"),
             &Value::Num(x) => write!(f, "{}", x),
             &Value::Bool(x) => write!(f, "{}", x),
-            &Value::Str(ref x) => write!(f, "{:?}", x),
+            &Value::Str(ref x) => write!(f, "{:?}", x), // {:?} is ok for now
             &Value::Func(ref x) => write!(f, "{}", x),
             &Value::List(ref x) => print_container!("[", x.iter(), ", ", "]"),
             &Value::Set(ref x) => print_container!("{", x.iter(), ", ", "}"),

@@ -79,7 +79,7 @@ comma_plus<T>: Vec<T> = sep_list_plus<T, ",">;
 // expression tier, used for operator precedence
 tier<Op, NextTier>: Expr = {
     <lhs: tier<Op, NextTier>> <op: Op> <rhs: NextTier> => Expr::Op(
-        FunCall::new_with_args(op, vec![], vec![lhs, rhs])
+        FunCall::new(op, vec![lhs, rhs], vec![])
     ),
     NextTier
 };
@@ -102,11 +102,11 @@ tier_3_op: Expr = tier<operator_3, tier_4_op>;
 tier_4_op: Expr = tier<operator_4, tier_5_op>;
 
 tier_5_op: Expr = {
-    "(" "-" <e: value> ")" => Expr::Op(
-        FunCall::new_with_args(OpCode::Neg, vec![], vec![e])
+    "-" <e: value> => Expr::Op(
+        FunCall::new(OpCode::Neg, vec![e], vec![])
     ),
     "not" <e: value> => Expr::Op(
-        FunCall::new_with_args(OpCode::Not, vec![], vec![e])
+        FunCall::new(OpCode::Not, vec![e], vec![])
     ),
     value => <>,
 };
@@ -126,9 +126,9 @@ value: Expr = {
 
     "[" <comma<expr>> "]" => Expr::List(<>),
     "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
-    "{" ":" "}" => Expr::Map(vec![].into_iter().collect()), // empty map
+    "{" ":" ","? "}" => Expr::Map(vec![].into_iter().collect()), // empty map
     "{" <comma_plus<map_pair>> "}" => Expr::Map(<>.into_iter().collect()),
-    "{" "|" "}" => Expr::Distribution(vec![].into_iter().collect()),
+    "{" "|" ","? "}" => Expr::Distribution(vec![].into_iter().collect()),
     "{" <a: alt_item> "|" <list: sep_list<alt_item, "|">> "}" => {
         let mut v = list;
         v.push(a);
@@ -141,7 +141,7 @@ value: Expr = {
             body: Box::new(body),
         })),
     <id: identifier> "(" <args: comma<expr>> ")" => Expr::Op(
-        FunCall::new_with_args(OpCode::Id(id), vec![], args)
+        FunCall::new(OpCode::Id(id), args, vec![])
     ),
     "(" <expr> ")" => <>,
 };

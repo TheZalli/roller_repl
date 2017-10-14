@@ -41,6 +41,7 @@ impl RollerNamespace {
 #[derive(Debug)]
 pub struct Env {
     global_ns: RollerNamespace,
+    ns_stack: Vec<RollerNamespace>,
 }
 
 impl Env {
@@ -48,7 +49,24 @@ impl Env {
     pub fn new() -> Self {
         Env {
             global_ns: RollerNamespace::new(),
+            ns_stack: Vec::new(),
         }
+    }
+
+    /// Inserts the variable `id` with `value`.
+    /// 
+    /// Checks if a local namespace exists and inserts there if it does.
+    /// Otherwise inserts the variable to the global namespace.
+    pub fn insert(&mut self, id: IdType, value: Value) -> Option<Value> {
+        self.ns_stack.last_mut().unwrap_or(&mut self.global_ns)
+            .insert(id, value)
+    }
+
+    /// Get a refence to a variable with name id.
+    /// 
+    /// Checks the local namespace first, then if it doesn't exist, the global.
+    fn var(&self, id: &str) -> Result<&Value> {
+        self.ns_stack.last().unwrap_or(&self.global_ns).var(id)
     }
 
     /// Evaluates the expression and returns a printable message.
@@ -57,20 +75,11 @@ impl Env {
             Ok(val) => {
                 // string representation of the value
                 let val_str = match val {
-                    Value::Num(x) if !x.is_integer() =>
-                        // non-integer numerals print differently
-                        format!(
-                            "{} (≈ {})", x,
-                            *x.numer() as f64 / *x.denom() as f64
-                        ),
-                    Value::Str(s) =>
-                        // unescape and print
-                        format!("\"{}\"\nPrinted:\n{}",
-                            s.chars().map::<String, _>(
-                                |c| c.escape_debug().collect()
-                            ).collect::<String>(),
-                            s
-                        ),
+                    // non-integer numerals print differently
+                    Value::Num(x) if !x.is_integer() => format!(
+                        "{} (≈ {})", x, *x.numer() as f64 / *x.denom() as f64
+                    ),
+                    Value::Str(s) => format!("\"{:?}\"\nPrinted:\n{}", s, s),
                     x => format!("{}", x),
                 };
 
@@ -84,19 +93,18 @@ impl Env {
             },
             Err(e) => format!("Error: {}", e)
         }
-        
     }
 
     /// Evaluates the expression and returns the resulting value.
     pub fn eval(&mut self, expr: &Expr) -> Result<Value> {
         match expr {
             &Expr::Val(ref x) => Ok(x.clone()),
-            &Expr::Id(ref x) => self.global_ns.var(x).map(|x| x.clone()),
+            &Expr::Id(ref x) => self.var(x).map(|x| x.clone()),
             &Expr::Op(ref fun_call) => self.eval_call(fun_call),
             &Expr::Assign(ref id, ref expr) => {
                 // assign a value and return it
                 let val = self.eval(&*expr)?;
-                self.global_ns.insert(id.to_owned(), val.clone());
+                self.insert(id.to_owned(), val.clone());
                 return Ok(val);
             },
             &Expr::List(ref x) => Ok(Value::List(
@@ -164,39 +172,118 @@ impl Env {
     /// Evaluates a function call.
     fn eval_call(&mut self, call: &FunCall) -> Result<Value> {
         // evaluate arguments first
-        let mut vals = Vec::with_capacity(call.ordered_args.len());
-        
-        for expr in call.ordered_args.iter() {
+        let mut vals = Vec::with_capacity(call.args.len());
+        for expr in call.args.iter() {
             vals.push(self.eval(expr)?);
         }
 
+        let mut kw_vals = BTreeMap::new();
+        for &(ref kw, ref expr) in call.kw_args.iter() {
+            // later duplicate keyword arguments override previous ones
+            kw_vals.insert(kw, self.eval(expr)?);
+        }
+
         // binary ops
-        let acc_op = |code: &OpCode, operands: Vec<Value>,
-                      func: fn(&Value, &Value) -> Result<Value>|
-                      -> Result<Value>
-            {
-                if operands.len() < 2 {
-                    Err(EvalError::invalid_arg(&format!(
-                        "Operator `{:?}` requires at least 2 operands", code
-                    )))
-                } else {
-                    use std::collections::VecDeque;
-                    let mut arg_values: VecDeque<Value> = operands.into();
+        fn acc_op(code: &OpCode,
+                  operands: Vec<Value>,
+                  func: fn(&Value, &Value) -> Result<Value>)
+            -> Result<Value>
+        {
+            if operands.len() < 2 {
+                Err(EvalError::invalid_arg(&format!(
+                    "Operator `{:?}` requires at least 2 operands", code
+                )))
+            } else {
+                use std::collections::VecDeque;
+                let mut arg_values: VecDeque<Value> = operands.into();
 
-                    // calculate result
-                    let mut acc = 
-                        func(&arg_values.pop_front().unwrap(),
-                            &arg_values.pop_front().unwrap())?;
-                    
-                    for val in arg_values {
-                        acc = func(&acc, &val)?;
-                    }
-
-                    return Ok(acc);
+                // calculate result
+                let mut acc = 
+                    func(&arg_values.pop_front().unwrap(),
+                        &arg_values.pop_front().unwrap())?;
+                
+                for val in arg_values {
+                    acc = func(&acc, &val)?;
                 }
-            };
+
+                return Ok(acc);
+            }
+        }
         
         match &call.code {
+            &OpCode::Id(ref id) => {
+                // is it possible to avoid the clone?
+                match self.var(id)?.clone() {
+                    Value::Func(fun_def) => {
+                        // the function's local namespace
+                        let mut ns = RollerNamespace::new();
+
+                        // iterator for names
+                        let mut name_iter = fun_def.arg_names.iter();
+                        // iterator for unordered values
+                        let vals_len = vals.len(); // used in an error msg
+                        let val_iter = vals.into_iter();
+
+                        // we don't use name_iter.zip(val_iter) since zip
+                        // consumes the iterators and we want to use name_iter
+                        // after this loop
+                        for val in val_iter {
+                            let name = name_iter.next().ok_or(
+                                // we ran out of parameters to fill!
+                                EvalError::invalid_arg(&format!(
+                                    "Expected {} arguments, got too many \
+                                    unordered arguments ({})",
+                                    fun_def.arg_names.len(), vals_len
+                                ))
+                            )?;
+
+                            if ns.insert(name.clone(), val).is_some() {
+                                // if we validate function definitions we
+                                // should never get here
+                                panic!(
+                                    "Function has argument named `{}` more \
+                                    than once!", name
+                                );
+                            }
+                        }
+                        
+                        // read the rest of the defined arguments and pass 
+                        // values from keyword arguments
+                        for name in name_iter {
+                            // remove the values so in the end we can see if
+                            // we had any extra arguments by checking length
+                            let val = kw_vals.remove(name).ok_or(
+                                EvalError::invalid_arg(&format!(
+                                    "Argument `{}` not defined", name
+                                ))
+                            )?;
+
+                            ns.insert(name.clone(), val).ok_or(
+                                EvalError::invalid_arg(&format!(
+                                    "Tried to pass argument {} twice", name
+                                ))
+                            )?;
+                        }
+
+                        if !kw_vals.is_empty() {
+                            return Err(EvalError::invalid_arg(&format!(
+                                "Got {} extra keyword arguments", kw_vals.len()
+                            )));
+                        }
+
+                        // push a new 'stack frame'
+                        // TODO: implement max call stack size and check it here
+                        self.ns_stack.push(ns);
+                        let return_value = self.eval(&fun_def.body);
+                        self.ns_stack.pop();
+                        return_value  // pun not intended
+                    },
+                    // we can't call this if it's not a function
+                    val => Err(EvalError::unexpected_type(&format!(
+                        "Expected a function value, got value {}", val 
+                    )))
+                }
+            },
             &OpCode::Not =>
                 if vals.len() != 1 {
                     Err(EvalError::invalid_arg(&format!(
@@ -221,9 +308,6 @@ impl Env {
             &OpCode::Mul => acc_op(&call.code, vals, Value::mul),
             &OpCode::Div => acc_op(&call.code, vals, Value::div),
             &OpCode::Pow => acc_op(&call.code, vals, Value::pow),
-            x => Err(EvalError::unimplemented(
-                &format!("function `{:?}` is still unimplemented", x)
-            )),
         }
     }
 
