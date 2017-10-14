@@ -57,19 +57,23 @@ sep_list<T, S>: Vec<T> = {
     }
 };
 
-// like sep_list, but needs at least 1 item and doesn't allow trailing separator
+// like sep_list, but needs at least 1 item with optional trailing separator
 sep_list_plus<T, S>: Vec<T> = {
-    <v:(<T> S)*> <e: T> => {
-        let mut v = v;
-        v.push(e);
-        v
+    <v:(<T> S)+> <e: T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
     }
 };
 
 // comma separated list of values with optional trailing comma
 comma<T>: Vec<T> = sep_list<T, ",">;
 
-// comma separated list of values without trailing comma and at least 1 item
+// comma separated list of values with optional trailing comma and at least 1 
+// item
 comma_plus<T>: Vec<T> = sep_list_plus<T, ",">;
 
 // expression tier, used for operator precedence
@@ -88,7 +92,6 @@ pub expr: Expr = {
 };
 
 statement: Expr = {
-    <id: identifier> "is" <e: tier_1_op> => Expr::Decl(id, Box::new(e)),
     <lhs: identifier> "=" <e: expr> => Expr::Assign(lhs, Box::new(e)),
 };
 
@@ -99,7 +102,7 @@ tier_3_op: Expr = tier<operator_3, tier_4_op>;
 tier_4_op: Expr = tier<operator_4, tier_5_op>;
 
 tier_5_op: Expr = {
-    "-" <e: value> => Expr::Op(
+    "(" "-" <e: value> ")" => Expr::Op(
         FunCall::new_with_args(OpCode::Neg, vec![], vec![e])
     ),
     "not" <e: value> => Expr::Op(

@@ -2,6 +2,7 @@
 ///! Abstract syntax tree representation.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
 
 use value::{Value, IdType};
 use op::{OpCode, CompOp};
@@ -98,6 +99,16 @@ impl FunCall {
             names: argument_names,
             ordered_args: exprs,
             named_args: Vec::new(),
+        }
+    }
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Expr::Val(ref x) => write!(f, "{}", x),
+            &Expr::Id(ref x) => write!(f, "{}", x),
+            _ => write!(f, "{:?}", self) // TODO
         }
     }
 }
