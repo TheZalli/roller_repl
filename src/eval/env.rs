@@ -98,6 +98,11 @@ impl Env {
     /// Evaluates the expression and returns the resulting value.
     pub fn eval(&mut self, expr: &Expr) -> Result<Value> {
         match expr {
+            &Expr::Val(Value::Func(ref fun_def)) => {
+                // check if the definition is valid
+                fun_def.check_valid()?;
+                Ok(Value::Func(fun_def.clone()))
+            },
             &Expr::Val(ref x) => Ok(x.clone()),
             &Expr::Id(ref x) => self.var(x).map(|x| x.clone()),
             &Expr::Op(ref fun_call) => self.eval_call(fun_call),
@@ -140,13 +145,13 @@ impl Env {
                             }
                         } else {
                             return Err(EvalError::unexpected_type(&format!(
-                                "Expected a positive (>0) 32-bit unsigned \
+                                "expected a positive (>0) 32-bit unsigned \
                                 integer value as the weight, got value {}", val
                             )));
                         }
                     } else {
                         return Err(EvalError::unexpected_type(&format!(
-                            "Expected numeral weight value, got value {}", val
+                            "expected numeral weight value, got value {}", val
                         )));
                     }
                 }
@@ -191,7 +196,7 @@ impl Env {
         {
             if operands.len() < 2 {
                 Err(EvalError::invalid_arg(&format!(
-                    "Operator `{:?}` requires at least 2 operands", code
+                    "operator `{:?}` requires at least 2 operands", code
                 )))
             } else {
                 use std::collections::VecDeque;
@@ -231,7 +236,7 @@ impl Env {
                             let name = name_iter.next().ok_or(
                                 // we ran out of parameters to fill!
                                 EvalError::invalid_arg(&format!(
-                                    "Expected {} arguments, got too many \
+                                    "expected {} arguments, got too many \
                                     unordered arguments ({})",
                                     fun_def.arg_names.len(), vals_len
                                 ))
@@ -241,7 +246,7 @@ impl Env {
                                 // if we validate function definitions we
                                 // should never get here
                                 panic!(
-                                    "Function has argument named `{}` more \
+                                    "function has argument named `{}` more \
                                     than once!", name
                                 );
                             }
@@ -254,20 +259,20 @@ impl Env {
                             // we had any extra arguments by checking length
                             let val = kw_vals.remove(name).ok_or(
                                 EvalError::invalid_arg(&format!(
-                                    "Argument `{}` not defined", name
+                                    "argument `{}` not defined", name
                                 ))
                             )?;
 
                             ns.insert(name.clone(), val).ok_or(
                                 EvalError::invalid_arg(&format!(
-                                    "Tried to pass argument {} twice", name
+                                    "tried to pass argument {} twice", name
                                 ))
                             )?;
                         }
 
                         if !kw_vals.is_empty() {
                             return Err(EvalError::invalid_arg(&format!(
-                                "Got {} extra keyword arguments", kw_vals.len()
+                                "got {} extra keyword arguments", kw_vals.len()
                             )));
                         }
 
@@ -280,14 +285,14 @@ impl Env {
                     },
                     // we can't call this if it's not a function
                     val => Err(EvalError::unexpected_type(&format!(
-                        "Expected a function value, got value {}", val 
+                        "expected a function value, got value {}", val 
                     )))
                 }
             },
             &OpCode::Not =>
                 if vals.len() != 1 {
                     Err(EvalError::invalid_arg(&format!(
-                        "Not-operation requires exactly 1 operand"
+                        "not-operation requires exactly 1 operand"
                     )))
                 } else {
                     vals[0].not()
@@ -298,7 +303,7 @@ impl Env {
             &OpCode::Neg =>
                 if vals.len() != 1 {
                     Err(EvalError::invalid_arg(&format!(
-                        "Negation requires exactly 1 operand"
+                        "negation requires exactly 1 operand"
                     )))
                 } else {
                     vals[0].neg()

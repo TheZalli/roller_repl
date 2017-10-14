@@ -78,10 +78,11 @@ pub struct FunCall {
 }
 
 impl FunCall {
+    /// Create a new function call with the given ordered, and named, arguments.
     pub fn new(code: OpCode,
-                         args: Vec<Expr>,
-                         kw_args: Vec<(IdType, Expr)>)
-                         -> Self
+               args: Vec<Expr>,
+               kw_args: Vec<(IdType, Expr)>)
+               -> Self
     {
         FunCall {
             code: code,

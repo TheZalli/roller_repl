@@ -4,8 +4,8 @@ use std::collections::{BTreeSet, BTreeMap};
 
 use num::rational::Ratio;
 
-use ast::Expr;
 use error::{EvalError, Result};
+use ast::Expr;
 
 // Type of the identifier strings.
 pub type IdType = String;
@@ -29,6 +29,22 @@ pub enum Value {
 pub struct FunDef {
     pub arg_names: Vec<IdType>,
     pub body: Box<Expr>,
+}
+
+impl FunDef {
+    /// Checks if this function definition is valid and returns any error found.
+    pub fn check_valid(&self) -> Result<()> {
+        // check for duplicate argument names
+        let mut test_map = BTreeSet::new();
+        for name in self.arg_names.iter() {
+            if !test_map.insert(name) {
+                return Err(EvalError::invalid_arg(&format!(
+                    "argument `{}` appeared more than once!", name
+                )));
+            }
+        }
+        Ok(())
+    }
 }
 
 macro_rules! impl_op {
