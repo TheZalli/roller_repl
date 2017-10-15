@@ -22,6 +22,10 @@ It is not designed to be a particularly useful language, at the moment, but even
         * Implemented as a Rust binary tree set
     * Map (`{1:"a", 2:"b", 3:"c"}`)
         * Implemented as a Rust binary tree map
+    * Distribution (`{1 | 2 | 3}` or `{true:2 | false:1}`)
+        * A weighted discrete distribution, implemented as a binary tree map, like the previous map datatype
+        * Each element allows an optional weight value, that has to be an integer
+        * Duplicate key values are merged and the result's weight value will be their sum
     * Functions (`{a b -> a + b}`)
         * Functions are first-class citizens
 * Variables
@@ -52,6 +56,8 @@ It is not designed to be a particularly useful language, at the moment, but even
 * String operations
 * Piecewise and assignment operations
     * Easy to implement
+* Distribution operations
+    * Print distributions nicely, show probabilities, and resolve random outputs
 * Integer logical operations, including bitshifts and maybe rotations
     * Would work best with the type system (these are not defined for ratios)
 * Type system, type declarations
