@@ -11,7 +11,6 @@ use ast::Expr;
 pub type IdType = String;
 
 /// A Roller value.
-#[allow(dead_code)] // TODO delete
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     None,

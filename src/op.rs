@@ -1,7 +1,6 @@
 use value::IdType;
 
 /// Operators
-#[allow(dead_code)] // TODO delete
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OpCode {
     Id(IdType),

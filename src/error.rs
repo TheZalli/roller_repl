@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 pub type Result<T> = ::std::result::Result<T, EvalError>;
 
@@ -28,7 +29,6 @@ macro_rules! impl_err_kind_builder {
     }
 }
 
-#[allow(dead_code)] // TODO delete
 impl EvalError {
     impl_err_kind_builder!(invalid_arg, InvalidArgument);
     impl_err_kind_builder!(unsupported_op, UnsupportedOperation);
@@ -48,9 +48,7 @@ impl EvalError {
 
 }
 
-// TODO: Implement display
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(dead_code)] // TODO delete
 pub enum EvalErrorKind {
     InvalidArgument,
     UnsupportedOperation,
@@ -58,11 +56,38 @@ pub enum EvalErrorKind {
     VariableNotFound,
     UnexpectedType,
     Unimplemented,
+    /// Remember to check that the name is not the same as one of above
     Custom(String),
+}
+
+impl FromStr for EvalErrorKind {
+    type Err = (); // we can't fail
+    fn from_str(s: &str) -> ::std::result::Result<Self, ()> {
+        use self::EvalErrorKind::*;
+        Ok(match s {
+            "InvalidArgument" => InvalidArgument,
+            "UnsupportedOperation" => UnsupportedOperation,
+            "ArithmeticError" => ArithmeticError,
+            "VariableNotFound" => VariableNotFound,
+            "UnexpectedType" => UnexpectedType,
+            "Unimplemented" => Unimplemented,
+            _ => Custom(s.to_string())
+        })
+    }
+}
+
+impl fmt::Display for EvalErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let &EvalErrorKind::Custom(ref s) = self {
+            write!(f, "{}", s)
+        } else {
+            write!(f, "{:?}", self)
+        }
+    }
 }
 
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}, {}", self.kind, self.message)
+        write!(f, "{}, {}", self.kind, self.message)
     }
 }

@@ -6,9 +6,8 @@ use num::rational::Ratio;
 
 use op::{OpCode, CompOp};
 
-
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 28] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
     (r"\(", &|_| Token::LParen),
     (r"\)", &|_| Token::RParen),
     (r"\[", &|_| Token::LBracket),
@@ -29,6 +28,16 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 28] = [
     (r"\*", &|_| Token::Op(OpCode::Mul)),
     (r"/", &|_| Token::Op(OpCode::Div)),
     (r"\^", &|_| Token::Op(OpCode::Pow)),
+
+    (r"\.\+", &|_| Token::DotOp(OpCode::Add)),
+    (r"\.\*", &|_| Token::DotOp(OpCode::Mul)),
+    (r"\./", &|_| Token::DotOp(OpCode::Div)),
+    (r"\.\^", &|_| Token::DotOp(OpCode::Pow)),
+
+    (r"=\+", &|_| Token::AssignOp(OpCode::Add)),
+    (r"=\*", &|_| Token::AssignOp(OpCode::Mul)),
+    (r"=/", &|_| Token::AssignOp(OpCode::Div)),
+    (r"=\^", &|_| Token::AssignOp(OpCode::Pow)),
 
     (r"\.", &|_| Token::Dot),
     (r",", &|_| Token::Comma),

@@ -124,7 +124,6 @@ fn real_main() -> i32 {
 
                         // strip the location data
                         let tokens = tokens.into_iter().map(|(_, x)| x);
-
                         let parse_res = expr::parse_expression(tokens);
                         println!("Parsed: {:?}\n", parse_res);
 

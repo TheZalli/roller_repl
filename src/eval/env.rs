@@ -29,13 +29,6 @@ impl RollerNamespace {
             EvalError::var_not_found(id)
         )
     }
-
-    /// Return a mutable reference to a variable.
-    pub fn var_mut(&mut self, id: &str) -> Result<&mut Value> {
-        self.variables.get_mut(id).ok_or(
-            EvalError::var_not_found(id)
-        )
-    }
 }
 
 #[derive(Debug)]
