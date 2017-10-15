@@ -112,6 +112,9 @@ tier_5_op: Expr = {
     "not" <e: value> => Expr::Op(
         FunCall::new(OpCode::Not, vec![e], vec![])
     ),
+    <e: value> "(" <args: comma<expr>> ")" => Expr::Op(
+        FunCall::new(OpCode::Expr(Box::new(e)), args, vec![])
+    ),
     value => <>,
 };
 
@@ -144,9 +147,6 @@ value: Expr = {
             arg_names: args,
             body: Box::new(body),
         })),
-    <id: identifier> "(" <args: comma<expr>> ")" => Expr::Op(
-        FunCall::new(OpCode::Id(id), args, vec![])
-    ),
     "(" <expr> ")" => <>,
 };
 

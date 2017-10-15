@@ -1,9 +1,9 @@
-use value::IdType;
+use ast::Expr;
 
 /// Operators
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OpCode {
-    Id(IdType),
+    Expr(Box<Expr>),
 
     Neg,
     Not,

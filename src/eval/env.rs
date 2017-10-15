@@ -209,9 +209,9 @@ impl Env {
         }
         
         match &call.code {
-            &OpCode::Id(ref id) => {
+            &OpCode::Expr(ref e) => {
                 // is it possible to avoid the clone?
-                match self.var(id)?.clone() {
+                match self.eval(e)? {
                     Value::Func(fun_def) => {
                         // the function's local namespace
                         let mut ns = RollerNamespace::new();
