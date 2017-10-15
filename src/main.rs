@@ -1,3 +1,8 @@
+///! Roller REPL implementation.
+///! 
+///! Works as a reference implementation.
+///! To see what is and what is not implemented, check the readme.
+
 #[cfg(unix)]
 extern crate libc;
 #[macro_use]
@@ -25,6 +30,7 @@ use parser::expr;
 use eval::Env;
 
 fn main() {
+    // this is a command-line application so we want to return the status number
     ::std::process::exit(real_main());
 }
 
