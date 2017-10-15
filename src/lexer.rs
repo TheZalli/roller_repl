@@ -8,7 +8,7 @@ use op::{OpCode, CompOp};
 
 
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 26] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 28] = [
     (r"\(", &|_| Token::LParen),
     (r"\)", &|_| Token::RParen),
     (r"\[", &|_| Token::LBracket),
@@ -36,6 +36,9 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 26] = [
     (r";", &|_| Token::Semicolon),
     (r"\|", &|_| Token::Alternate),
     (r"-", &|_| Token::Minus),
+
+    (r"\\\s*$", &|_| Token::MetaContinueNextLine),
+    (r"\n", &|_| Token::End),
 
     // match numerals
     (r"[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?",
@@ -73,7 +76,8 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 26] = [
 ];
 
 lazy_static! {
-    static ref WS_STRIP_REGEX: Regex = Regex::from_str(r"^\s*").unwrap();
+    static ref WS_STRIP_REGEX: Regex =
+        Regex::from_str(r"^[\s&&[^\n]]*").unwrap();
 }
 
 #[derive(Clone)]
@@ -86,8 +90,43 @@ pub struct Lexer {
 pub struct LexerIter<'a, 'b: 'a> {
     lexer: &'a Lexer,
     consumed: usize,
+    line_num: usize,
     input: &'b str,
+    terminate: bool,
 }
+
+/// Location of a token in an input string
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Loc {
+    /// Line number.
+    /// For REPL environment, this starts at 0, otherwise it starts at 1.
+    pub line: usize,
+    pub col_start: usize,
+    pub col_end: usize,
+}
+
+impl Loc {
+    pub fn new(line: usize, col_start: usize, col_end: usize) -> Self {
+        Loc {
+            line: line,
+            col_start: col_start,
+            col_end: col_end,
+        }
+    }
+}
+
+impl ::std::fmt::Debug for Loc {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "Loc{{{}}}", self)
+    }
+}
+
+impl ::std::fmt::Display for Loc {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "{}:{}-{}", self.line, self.col_start, self.col_end)
+    }
+}
+
 
 /// The types of tokens present in the script
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -153,8 +192,12 @@ pub enum Token {
     Str(String),
     /// Identifier
     Id(String),
-    // / End of line
-    //Eol
+    /// A meta-token that tells to continue and to parse the next line and to 
+    /// glue it after this one.
+    MetaContinueNextLine,
+    /// End of expression.
+    /// Returned on newlines without continuation and end-of-input.
+    End
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -163,17 +206,35 @@ pub enum LexError {
 }
 
 impl Lexer {
-    pub fn parse_iter<'a, 'b>(&'a self, input: &'b str) -> LexerIter<'a, 'b> {
+    pub fn parse_iter<'a, 'b>(&'a self, input: &'b str, line_num: usize)
+        -> LexerIter<'a, 'b>
+    {
         LexerIter {
             lexer: self,
             consumed: 0,
+            line_num: line_num,
             input: input,
+            terminate: false,
         }
     }
-    pub fn parse(&self, input: &str) ->
-        Result<Vec<(usize, Token, usize)>, LexError>
+
+
+    /// Lexes the given input into tokens and returns them and a boolean 
+    /// indicating whether it expects a new line of input to be extended after 
+    /// this.
+    pub fn parse(&self, input: &str, line_num: usize) ->
+        Result<(Vec<(Loc, Token)>, bool), LexError>
     {
-        self.parse_iter(input).collect()
+        let lexed: Result<Vec<_>, _> = 
+            self.parse_iter(input, line_num).collect();
+        let lexed = lexed?;
+
+        // check the last token in case of continuation
+        match lexed.last() {
+            Some(&(_, Token::MetaContinueNextLine)) =>
+                Ok((lexed[0..lexed.len()-1].to_vec(), true)),
+            Some(_) | None => Ok((lexed, false)),
+        }
     }
 }
 
@@ -197,16 +258,26 @@ impl<'a> Default for Lexer {
 }
 
 impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
-    type Item = Result<(usize, Token, usize), LexError>;
+    type Item = Result<(Loc, Token), LexError>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.terminate {
+            // will never return Some(_) after returning None
+            return None;
+        }
+
         // strip left whitespace
         let ma = WS_STRIP_REGEX.find(self.input).unwrap();
         self.input = &self.input[ma.end()..];
         self.consumed += ma.end();
 
         if self.input.is_empty() {
-            return None;
+            // when the input is empty terminate on the next iteration
+            self.terminate = true;
+            return Some(Ok((
+                Loc::new(self.line_num, self.consumed, self.consumed),
+                Token::End,
+            )));
         }
 
         for found_index in self.lexer.regex_set.matches(self.input) {
@@ -223,17 +294,23 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
             // record chopped off bytes
             self.consumed += ma.end();
 
+            let token = tok_fun(ma.as_str());
+
+            // if we found the continuation we also found the end of line
+            if token == Token::MetaContinueNextLine {
+                self.terminate = true;
+            }
+
             // return the matched token
             return Some(Ok((
-                offset + ma.start(),
-                tok_fun(ma.as_str()),
-                offset + ma.end()
+                Loc::new(self.line_num, offset + ma.start(), offset + ma.end()),
+                token,
             )));
             // other matches are ignored, if they even exist
         }
 
         // no rule matched
-        self.input = ""; // stop on next iteration
+        self.terminate = true; // stop on next iteration
         Some(Err(LexError::InvalidToken))
     }
 }

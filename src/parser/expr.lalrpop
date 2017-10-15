@@ -42,6 +42,7 @@ extern {
         num => Token::Num(<Ratio<i32>>),
         string => Token::Str(<String>),
         identifier => Token::Id(<String>),
+        end => Token::End
     }
 }
 
@@ -84,7 +85,10 @@ tier<Op, NextTier>: Expr = {
     NextTier
 };
 
-pub expr: Expr = {
+// without this lalrpop ignores rest of the input if we found a rule match
+pub expression: Expr = <expr> end => <>;
+
+expr: Expr = {
     tier_1_op => <>,
     statement => <>,
 

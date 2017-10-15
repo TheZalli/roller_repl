@@ -46,6 +46,7 @@ fn real_main() -> i32 {
     };
 
     let prompt = "» ";
+    let prompt_continue = "› ";
 
     // rustyline input & output
     let mut rl = rustyline::Editor::<()>::new();
@@ -63,11 +64,20 @@ fn real_main() -> i32 {
     // the evaluation environment holding the runtime data
     let mut env = Env::new();
 
+    // a helper token holder
+    let mut temp_tokens = Vec::new();
+    // the continuation flag
+    let mut continuing = false;
+    // the line number, 0 is the first line of repl-input
+    let mut line_num = 0usize;
+    
     // return value
     let return_status = loop {
         // read a line
         let line_res = if out_isatty {
-            rl.readline(prompt)
+            rl.readline(
+                if continuing { prompt_continue } else { prompt }
+            )
         } else {
             pipe_reader.next()
                 .map_or(
@@ -77,8 +87,6 @@ fn real_main() -> i32 {
         };
 
         match line_res {
-            Ok(ref input) if input.trim().is_empty() => continue, // empty input
-
             Ok(input) => {
                 // ok input
                 if out_isatty {
@@ -88,12 +96,36 @@ fn real_main() -> i32 {
                     // we might want to give a flag to supress this
                     println!("{}{}", prompt, input);
                 }
-                match lexer.parse(&input) {
-                    Ok(lexed) => {
-                        println!("Lexed: {:?}\n", lexed);
 
-                        let tokens = lexed.into_iter().map(|(_, x, _)| x);
-                        let parse_res = expr::parse_expr(tokens);
+                // by-default do not continue
+                continuing = false;
+
+                match lexer.parse(&input, line_num) {
+                    // continue to the next iteration
+                    Ok((lexed, true)) => {
+                        temp_tokens.extend(lexed);
+                        continuing = true;
+                        line_num += 1;
+                    },
+                    Ok((lexed, false)) => {
+                        temp_tokens.extend(lexed);
+
+                        // steal the temporary tokens
+                        let mut tokens = Vec::new();
+                        ::std::mem::swap(&mut tokens, &mut temp_tokens);
+
+                        println!("Lexed: {:?}\n", tokens);
+
+                        // empty token streams are not valid
+                        // there will always be the end token
+                        if tokens.len() <= 1 {
+                            continue;
+                        }
+
+                        // strip the location data
+                        let tokens = tokens.into_iter().map(|(_, x)| x);
+
+                        let parse_res = expr::parse_expression(tokens);
                         println!("Parsed: {:?}\n", parse_res);
 
                         if let Ok(exp) = parse_res {
@@ -129,7 +161,12 @@ fn real_main() -> i32 {
                 break 1;
             },
         }
-    };
+
+        // reset line number if not continuing
+        if !continuing {
+            line_num = 0;
+        }
+    }; // end of the infinite loop
     
     if in_isatty {
         println!("Exiting");
