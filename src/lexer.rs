@@ -46,7 +46,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
     (r"\|", &|_| Token::Alternate),
     (r"-", &|_| Token::Minus),
 
-    (r"\\\s*$", &|_| Token::MetaContinueNextLine),
+    (r"\\\s*$", &|_| Token::MetaContinueNextLine(None)),
     (r"\n", &|_| Token::End),
 
     // match numerals
@@ -84,19 +84,14 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
     }),
 ];
 
-fn is_continue_token(tok: &Token) -> bool {
-    use self::Token::*;
-    match tok {
-        &Semicolon | &Comma | &Colon | &Dot | &Alternate | &RightArrow |
-        &Minus | &Op(_) | &Equals | &Comp(_) | &In | &If | &Then | &Else |
-        &Loop | &While | &For | &Try | &Catch | &Throw => true,
-        _ => false
-    }
-}
-
 lazy_static! {
-    static ref WS_STRIP_REGEX: Regex =
-        Regex::from_str(r"^[\s&&[^\n]]*").unwrap();
+    static ref WS_STRIP_REGEX: Regex = Regex::new(r"^[\s&&[^\n]]*").unwrap();
+
+    static ref LINE_COMMENT_REGEX: Regex = Regex::new(r"^//").unwrap();
+    static ref BLOCK_COMMENT_START_REGEX: Regex =
+        Regex::new(r"^[\s&&[^\n]]*/\*").unwrap();
+    static ref BLOCK_COMMENT_END_REGEX: Regex =
+        Regex::new(r"^.*?\*/").unwrap();
 }
 
 #[derive(Clone)]
@@ -112,6 +107,32 @@ pub struct LexerIter<'a, 'b: 'a> {
     line_num: usize,
     input: &'b str,
     terminate: bool,
+    block_comment_depth: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LexerState {
+    line_num: usize,
+    block_comment_depth: u8,
+}
+
+impl LexerState {
+    /// Returns the default state for a REPL-input lexer.
+    pub fn repl_default() -> Self {
+        LexerState {
+            line_num: 0,
+            block_comment_depth: 0,
+        }
+    }
+
+    /// Returns the default state for a file lexer.
+    #[allow(dead_code)] // TODO delete when used
+    pub fn file_default() -> Self {
+        LexerState {
+            line_num: 1,
+            block_comment_depth: 0,
+        }
+    }
 }
 
 /// Location of a token in an input string
@@ -212,8 +233,8 @@ pub enum Token {
     /// Identifier
     Id(String),
     /// A meta-token that tells to continue and to parse the next line and to 
-    /// glue it after this one.
-    MetaContinueNextLine,
+    /// glue it after this one. Contains the state needed for the next line.
+    MetaContinueNextLine(Option<LexerState>),
     /// End of expression.
     /// Returned on newlines without continuation and end-of-input.
     End
@@ -225,46 +246,38 @@ pub enum LexError {
 }
 
 impl Lexer {
-    pub fn parse_iter<'a, 'b>(&'a self, input: &'b str, line_num: usize)
+    pub fn parse_iter<'a, 'b>(&'a self, input: &'b str, state: LexerState)
         -> LexerIter<'a, 'b>
     {
         LexerIter {
             lexer: self,
             consumed: 0,
-            line_num: line_num,
+            line_num: state.line_num,
             input: input,
             terminate: false,
+            block_comment_depth: state.block_comment_depth,
         }
     }
 
-
-    /// Lexes the given input into tokens and returns them and a boolean 
-    /// indicating whether it expects a new line of input to be extended after 
-    /// this.
-    pub fn parse(&self, input: &str, line_num: usize) ->
-        Result<(Vec<(Loc, Token)>, bool), LexError>
+    /// Lexes the given input into tokens and returns them and an optional 
+    /// state which will be `None` if no continuation is expected, or containing
+    /// the state which is needed for the next line of input.
+    pub fn parse(&self, input: &str, state: LexerState) ->
+        Result<(Vec<(Loc, Token)>, Option<LexerState>), LexError>
     {
-        let lexed: Result<Vec<_>, _> = 
-            self.parse_iter(input, line_num).collect();
+        let lexed: Result<Vec<_>, _> = self.parse_iter(input, state).collect();
         let lexed = lexed?;
 
         // check the last and the next after it token in case of continuation
-        let to_continue = match lexed.split_last() {
-            Some((&(_, Token::MetaContinueNextLine), _)) => true,
-            Some((&(_, Token::End), rest)) =>
-                if let Some(&(_, ref tok)) = rest.last() {
-                    is_continue_token(tok)
-                } else {
-                    false
-                },
-            _ => false
-        };
-
-        if to_continue {
-            Ok((lexed[0..lexed.len()-1].to_vec(), true))
-        } else {
-            Ok((lexed, false))
+        if let Some((&(_, Token::MetaContinueNextLine(state_opt)), rest)) = 
+               lexed.split_last()
+        {
+            // this token having None at this execution path is not allowed
+            assert!(state_opt.is_some());
+            return Ok((rest.to_vec(), state_opt));
         }
+
+        Ok((lexed, None))
     }
 }
 
@@ -287,6 +300,25 @@ impl<'a> Default for Lexer {
     }
 }
 
+impl<'a, 'b: 'a> LexerIter<'a, 'b> {
+    /// Consumes input the given amount of bytes.
+    /// Panics if `amount` is larger than the input.
+    #[inline]
+    fn consume(&mut self, amount: usize) {
+        // chop off used bytes
+        self.input = &self.input[amount..];
+        // record chopped off bytes
+        self.consumed += amount;
+    }
+
+    fn get_state(&self) -> LexerState {
+        LexerState {
+            line_num: self.line_num,
+            block_comment_depth: self.block_comment_depth,
+        }
+    }
+}
+
 impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
     type Item = Result<(Loc, Token), LexError>;
 
@@ -296,13 +328,37 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
             return None;
         }
 
+        if let Some(ma) = BLOCK_COMMENT_START_REGEX.find(self.input) {
+            // started a block comment
+            self.consume(ma.end());
+            self.block_comment_depth += 1;
+        }
+
+        while self.block_comment_depth > 0 {
+            // check for block comment ends in this line
+            if let Some(ma) = BLOCK_COMMENT_END_REGEX.find(self.input) {
+                // found a comment end
+                self.consume(ma.end());
+                self.block_comment_depth -= 1;
+            } else {
+                // another end not found on this line, continue on the next line
+                self.terminate = true;
+                return Some(Ok((
+                    Loc::new(self.line_num, self.consumed, self.consumed),
+                    Token::MetaContinueNextLine(Some(self.get_state())),
+                )));
+            }
+        }
+
         // strip left whitespace
         let ma = WS_STRIP_REGEX.find(self.input).unwrap();
-        self.input = &self.input[ma.end()..];
-        self.consumed += ma.end();
+        self.consume(ma.end());
 
-        if self.input.is_empty() {
-            // when the input is empty terminate on the next iteration
+        if self.input.is_empty() ||
+           LINE_COMMENT_REGEX.find(self.input).is_some()
+        {
+            // when the input is empty or we started a line comment, terminate 
+            // on the next iteration
             self.terminate = true;
             return Some(Ok((
                 Loc::new(self.line_num, self.consumed, self.consumed),
@@ -319,17 +375,17 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
 
             // store previous used bytes
             let offset = self.consumed;
-            // chop off used bytes
-            self.input = &self.input[ma.end()..];
-            // record chopped off bytes
-            self.consumed += ma.end();
+            self.consume(ma.end());
 
-            let token = tok_fun(ma.as_str());
-
-            // if we found the continuation we also found the end of line
-            if token == Token::MetaContinueNextLine {
-                self.terminate = true;
-            }
+            let token = match tok_fun(ma.as_str()) {
+                Token::MetaContinueNextLine(_) => {
+                    // if we found the continuation we also found the eol
+                    self.terminate = true;
+                    // fix the state
+                    Token::MetaContinueNextLine(Some(self.get_state()))
+                },
+                tok => tok,
+            };
 
             // return the matched token
             return Some(Ok((

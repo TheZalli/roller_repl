@@ -25,7 +25,7 @@ use std::io::BufRead;
 
 use rustyline::error::ReadlineError;
 
-use lexer::Lexer;
+use lexer::{Lexer, LexerState};
 use parser::expr;
 use eval::Env;
 
@@ -74,8 +74,8 @@ fn real_main() -> i32 {
     let mut temp_tokens = Vec::new();
     // the continuation flag
     let mut continuing = false;
-    // the line number, 0 is the first line of repl-input
-    let mut line_num = 0usize;
+    // the lexer state, for storing data between continuations
+    let mut state = LexerState::repl_default();
     
     // return value
     let return_status = loop {
@@ -106,14 +106,14 @@ fn real_main() -> i32 {
                 // by-default do not continue
                 continuing = false;
 
-                match lexer.parse(&input, line_num) {
+                match lexer.parse(&input, state) {
                     // continue to the next iteration
-                    Ok((lexed, true)) => {
+                    Ok((lexed, Some(new_state))) => {
                         temp_tokens.extend(lexed);
                         continuing = true;
-                        line_num += 1;
+                        state = new_state;
                     },
-                    Ok((lexed, false)) => {
+                    Ok((lexed, None)) => {
                         temp_tokens.extend(lexed);
 
                         // steal the temporary tokens
@@ -167,9 +167,9 @@ fn real_main() -> i32 {
             },
         }
 
-        // reset line number if not continuing
+        // reset the state if not continuing
         if !continuing {
-            line_num = 0;
+            state = LexerState::repl_default();
         }
     }; // end of the infinite loop
     

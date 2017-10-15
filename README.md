@@ -6,6 +6,9 @@ Roller Script is a toy language project of mine, and it's name might change in t
 It is not designed to be a particularly useful language, at the moment, but even this might change.
 
 ## What is implemented
+* Comments
+    * C-style, with nesting block comments (like in Rust)
+    * `//` ignores text till end-of-line and all text enclosed between `/*` and _the matching_ `*/` is ignored
 * Datatypes
     * None (`none`)
     * Boolean (`true`, `false`)
@@ -30,7 +33,7 @@ It is not designed to be a particularly useful language, at the moment, but even
         * Functions are first-class citizens
 * Variables
     * Variable identifiers are unicode strings
-    * Identifiers start with any character in the word unicode class or underscore, followed by any number of characters from word and number unicode classes and underscores.
+    * Identifiers start with any character in the word unicode class or underscore, followed by any number of characters from word and number unicode classes and underscores
     * Matched with `[\pL_][\pL\pN_]*` regex
 * Arithmetic operations
     * Addition (`+`), substraction, negation (`-`), multiplication (`*`), division (`/`), exponentiation (`^`)
@@ -47,8 +50,7 @@ It is not designed to be a particularly useful language, at the moment, but even
 
 ## What is not yet implemented
 * So many things
-* Comments
-    * C-style probably
+* File input
 * Command-line arguments and REPL-variables
     * Will use Clap
 * Collection indexing and other functions
@@ -63,9 +65,12 @@ It is not designed to be a particularly useful language, at the moment, but even
 * Type system, type declarations
     * Pretty big one
     * Probably after finishing the "MVP"
+* List comprehensions
+    * Needs type system probably
 * Other numerals beside ratios
     * To stop crashing when you type large numbers like `1e10`
+    * Bigratios
     * Normal integers and bigints
     * Floats
-    * Bigratios
     * Might need the type system for most idiomatic implementation
+* Some unit tests...
