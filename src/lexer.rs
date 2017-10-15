@@ -75,6 +75,16 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 28] = [
     }),
 ];
 
+fn is_continue_token(tok: &Token) -> bool {
+    use self::Token::*;
+    match tok {
+        &Semicolon | &Comma | &Colon | &Dot | &Alternate | &RightArrow |
+        &Minus | &Op(_) | &Equals | &Comp(_) | &In | &If | &Then | &Else |
+        &Loop | &While | &For | &Try | &Catch | &Throw => true,
+        _ => false
+    }
+}
+
 lazy_static! {
     static ref WS_STRIP_REGEX: Regex =
         Regex::from_str(r"^[\s&&[^\n]]*").unwrap();
@@ -229,11 +239,22 @@ impl Lexer {
             self.parse_iter(input, line_num).collect();
         let lexed = lexed?;
 
-        // check the last token in case of continuation
-        match lexed.last() {
-            Some(&(_, Token::MetaContinueNextLine)) =>
-                Ok((lexed[0..lexed.len()-1].to_vec(), true)),
-            Some(_) | None => Ok((lexed, false)),
+        // check the last and the next after it token in case of continuation
+        let to_continue = match lexed.split_last() {
+            Some((&(_, Token::MetaContinueNextLine), _)) => true,
+            Some((&(_, Token::End), rest)) =>
+                if let Some(&(_, ref tok)) = rest.last() {
+                    is_continue_token(tok)
+                } else {
+                    false
+                },
+            _ => false
+        };
+
+        if to_continue {
+            Ok((lexed[0..lexed.len()-1].to_vec(), true))
+        } else {
+            Ok((lexed, false))
         }
     }
 }
