@@ -106,13 +106,17 @@ tier_3_op: Expr = tier<operator_3, tier_4_op>;
 tier_4_op: Expr = tier<operator_4, tier_5_op>;
 
 tier_5_op: Expr = {
-    "-" <e: value> => Expr::Op(
+    "-" <e: tier_6_op> => Expr::Op(
         FunCall::new(OpCode::Neg, vec![e], vec![])
     ),
-    "not" <e: value> => Expr::Op(
+    "not" <e: tier_6_op> => Expr::Op(
         FunCall::new(OpCode::Not, vec![e], vec![])
     ),
-    <e: value> "(" <args: comma<expr>> ")" => Expr::Op(
+    tier_6_op => <>,
+};
+
+tier_6_op: Expr = {
+    <e: tier_6_op> "(" <args: comma<expr>> ")" => Expr::Op(
         FunCall::new(OpCode::Expr(Box::new(e)), args, vec![])
     ),
     value => <>,
