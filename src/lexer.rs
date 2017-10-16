@@ -243,6 +243,7 @@ pub enum Token {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexError {
     InvalidToken,
+    MaximumCommentDepthReached,
 }
 
 impl Lexer {
@@ -332,6 +333,9 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
             // started a block comment
             self.consume(ma.end());
             self.block_comment_depth += 1;
+            if self.block_comment_depth >= u8::max_value() {
+                return Some(Err(LexError::MaximumCommentDepthReached));
+            }
         }
 
         while self.block_comment_depth > 0 {

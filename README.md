@@ -9,6 +9,7 @@ It is not designed to be a particularly useful language, at the moment, but even
 * Comments
     * C-style, with nesting block comments (like in Rust)
     * `//` ignores text till end-of-line and all text enclosed between `/*` and _the matching_ `*/` is ignored
+    * Maximum block nesting depth is 255, which is plenty
 * Datatypes
     * None (`none`)
     * Boolean (`true`, `false`)
@@ -46,7 +47,7 @@ It is not designed to be a particularly useful language, at the moment, but even
     * Allowed comparison operators are `=`, `<`, `>`, `<=`, `>=` and `!=` (inequality)
     * Returns boolean
 * Function call
-    * `foo(1,2)`, `{x y -> x + y*2}(1, 2)`
+    * `foo(1, 2)`, `{x y -> x + y*2}(1, 2)`
 
 ## What is not yet implemented
 * So many things
@@ -74,3 +75,12 @@ It is not designed to be a particularly useful language, at the moment, but even
     * Floats
     * Might need the type system for most idiomatic implementation
 * Some unit tests...
+
+# Plans for future
+* Separate project into multiple crates
+    * Parser
+    * AST
+    * Library
+    * Interpreter and REPL
+* Dynamic library loading
+* Module/library system
