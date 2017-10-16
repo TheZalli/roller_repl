@@ -123,14 +123,14 @@ fn real_main() -> i32 {
                         println!("Lexed: {:?}\n", tokens);
 
                         // empty token streams are not valid
-                        // there will always be the end token
                         if tokens.len() <= 1 {
+                            // has only the end token
                             continue;
                         }
 
                         // strip the location data
                         let tokens = tokens.into_iter().map(|(_, x)| x);
-                        let parse_res = expr::parse_expression(tokens);
+                        let parse_res = expr::parse_line(tokens);
                         println!("Parsed: {:?}\n", parse_res);
 
                         if let Ok(exp) = parse_res {

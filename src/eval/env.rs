@@ -212,13 +212,14 @@ impl Env {
             &OpCode::Expr(ref e) => {
                 // is it possible to avoid the clone?
                 match self.eval(e)? {
+                    // evaluate a function call
                     Value::Func(fun_def) => {
                         // the function's local namespace
                         let mut ns = RollerNamespace::new();
 
                         // iterator for names
                         let mut name_iter = fun_def.arg_names.iter();
-                        // iterator for unordered values
+                        // iterator for ordered values
                         let vals_len = vals.len(); // used in an error msg
                         let val_iter = vals.into_iter();
 
@@ -230,7 +231,7 @@ impl Env {
                                 // we ran out of parameters to fill!
                                 EvalError::invalid_arg(&format!(
                                     "expected {} arguments, got too many \
-                                    unordered arguments ({})",
+                                    ordered arguments ({})",
                                     fun_def.arg_names.len(), vals_len
                                 ))
                             )?;
@@ -276,7 +277,52 @@ impl Env {
                         self.ns_stack.pop();
                         return_value  // pun not intended
                     },
-                    // we can't call this if it's not a function
+                    // evaluate a list indexing
+                    Value::List(vec) => {
+                        if vals.len() != 1 {
+                            Err(EvalError::invalid_arg(&format!(
+                                "got {} ordered arguments for list indexing, \
+                                expected one", vals.len()
+                            )))
+                        } else if kw_vals.len() != 0 {
+                            Err(EvalError::invalid_arg(&format!(
+                                "got {} named arguments for list indexing, \
+                                expected none", kw_vals.len()
+                            )))
+                        } else {
+                            match vals[0] {
+                                Value::Num(x) if x.is_integer() => {
+                                    // negative indexes start from the end
+                                    let idx =
+                                        if *x.numer() < 0 &&
+                                            (-*x.numer() as usize) <= vec.len()
+                                        {
+                                            // Thanks to Rust's paranoid view
+                                            // of integer overflows this next
+                                            // line's bug would've probably gone
+                                            // unnoticed.
+                                            vec.len() - (-*x.numer()) as usize
+                                        } else {
+                                            *x.numer() as usize
+                                        };
+                                    
+                                    if let Some(indexed_value) = vec.get(idx) {
+                                        // TODO remove clone, some day...
+                                        Ok(indexed_value.clone())
+                                    } else {
+                                        Err(EvalError::invalid_arg(&format!(
+                                            "index {} is out of bounds", x
+                                        )))
+                                    }
+                                },
+                                _ => Err(EvalError::unexpected_type(&format!(
+                                    "expected an integer numeral argument for \
+                                    list indexing, got {}", vals[0]
+                                )))
+                            }
+                        }
+                    },
+                    // we can't call this if it's not a function or a container
                     val => Err(EvalError::unexpected_type(&format!(
                         "expected a function value, got value {}", val 
                     )))

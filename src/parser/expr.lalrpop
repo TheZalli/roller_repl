@@ -37,6 +37,8 @@ extern {
         ":" => Token::Colon,
         ";" => Token::Semicolon,
         "|" => Token::Alternate,
+        "local" => Token::Local,
+        "global" => Token::Global,
         "none" => Token::None,
         boolean => Token::Bool(<bool>),
         num => Token::Num(<Ratio<i32>>),
@@ -86,7 +88,7 @@ tier<Op, NextTier>: Expr = {
 };
 
 // without this lalrpop ignores rest of the input if we found a rule match
-pub expression: Expr = <expr> end => <>;
+pub line: Expr = <expr> end => <>;
 
 expr: Expr = {
     tier_1_op => <>,
@@ -134,7 +136,6 @@ alt_item: (Expr, Expr) = {
 value: Expr = {
     term => Expr::Val(<>),
     identifier => Expr::Id(<>),
-
     "[" <comma<expr>> "]" => Expr::List(<>),
     "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
     "{" ":" ","? "}" => Expr::Map(vec![].into_iter().collect()), // empty map
@@ -145,7 +146,6 @@ value: Expr = {
         v.push(a);
         Expr::Distribution(v.into_iter().collect())
     },
-
     "{" <args: identifier*> "->" <body: expr> "}" =>
         Expr::Val(Value::Func(FunDef {
             arg_names: args,

@@ -5,11 +5,14 @@ This is a reference implementation of a REPL for Roller Script language.
 Roller Script is a toy language project of mine, and it's name might change in the future.
 It is not designed to be a particularly useful language, at the moment, but even this might change.
 
+There is no language reference yet, but you might want to check out the syntax description file at src/parser/expr.lalrpop for a better understanding of the current syntax.
+It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syntax.
+
 ## What is implemented
 * Comments
     * C-style, with nesting block comments (like in Rust)
     * `//` ignores text till end-of-line and all text enclosed between `/*` and _the matching_ `*/` is ignored
-    * Maximum block nesting depth is 255, which is plenty
+    * Maximum block comment nesting depth is 255, which is plenty
 * Datatypes
     * None (`none`)
     * Boolean (`true`, `false`)
@@ -31,7 +34,7 @@ It is not designed to be a particularly useful language, at the moment, but even
         * Each element allows an optional weight value, that has to be an integer
         * Duplicate key values are merged and the result's weight value will be their sum
     * Functions (`{a b -> a + b}`)
-        * Functions are first-class citizens
+        * Functions are first-class citizens, which is a trendy way of saying that they are just another datatype in this language
 * Variables
     * Variable identifiers are unicode strings
     * Identifiers start with any character in the word unicode class or underscore, followed by any number of characters from word and number unicode classes and underscores
@@ -48,13 +51,15 @@ It is not designed to be a particularly useful language, at the moment, but even
     * Returns boolean
 * Function call
     * `foo(1, 2)`, `{x y -> x + y*2}(1, 2)`
+    * Also used for collection indexing
 
 ## What is not yet implemented
 * So many things
 * File input
+* Error catching and throwing
 * Command-line arguments and REPL-variables
     * Will use Clap
-* Collection indexing and other functions
+* Collection indexing and other collection operations
 * Control structures and a solution for sequential code execution (code blocks? semicolon operator? just use lists?)
 * String operations
 * Piecewise and assignment operations
@@ -74,9 +79,12 @@ It is not designed to be a particularly useful language, at the moment, but even
     * Normal integers and bigints
     * Floats
     * Might need the type system for most idiomatic implementation
+* Maybe use reference counted or copy-on-write values, or maybe even garbage collecting
+* References
+    * Maybe even move from copy-semantics to reference-semantics
 * Some unit tests...
 
-# Plans for future
+## Possible plans for future
 * Separate project into multiple crates
     * Parser
     * AST
@@ -84,3 +92,4 @@ It is not designed to be a particularly useful language, at the moment, but even
     * Interpreter and REPL
 * Dynamic library loading
 * Module/library system
+* LLVM IR compiler frontend
