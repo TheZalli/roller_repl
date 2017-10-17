@@ -1,8 +1,8 @@
-# Roller Script (name subject to change) REPL
+# Roller Script REPL
 
 This is a reference implementation of a REPL for Roller Script language.
 
-Roller Script is a toy language project of mine, and it's name might change in the future.
+Roller Script is a toy language project of mine, and it's name will probably change in the future.
 It is not designed to be a particularly useful language, at the moment, but even this might change.
 
 There is no language reference yet, but you might want to check out the syntax description file at src/parser/expr.lalrpop for a better understanding of the current syntax.

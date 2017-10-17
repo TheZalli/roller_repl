@@ -34,7 +34,7 @@ impl EvalError {
     impl_err_kind_builder!(unsupported_op, UnsupportedOperation);
     impl_err_kind_builder!(arithm_error, ArithmeticError);
     impl_err_kind_builder!(var_not_found, VariableNotFound,
-        |id| format!("variable `{}` not found", id)
+        |id| format!("variable `{}` not found in this context", id)
     );
     impl_err_kind_builder!(unexpected_type, UnexpectedType);
     impl_err_kind_builder!(unimplemented, Unimplemented);

@@ -7,7 +7,7 @@ use op::{OpCode, CompOp};
 
 /// A namespace for variables.
 #[derive(Debug)]
-pub struct RollerNamespace {
+struct RollerNamespace {
     variables: BTreeMap<IdType, Value>,
 }
 
@@ -19,6 +19,9 @@ impl RollerNamespace {
         }
     }
 
+    /// Inserts a new variable to the namespace.
+    /// 
+    /// Returns old value if there were any.
     pub fn insert(&mut self, id: IdType, value: Value) -> Option<Value> {
         self.variables.insert(id, value)
     }
@@ -31,38 +34,38 @@ impl RollerNamespace {
     }
 }
 
+/// The script's running environment.
 #[derive(Debug)]
 pub struct Env {
-    global_ns: RollerNamespace,
+    /// The 'call stack', first element is the global namespace.
     ns_stack: Vec<RollerNamespace>,
 }
 
 impl Env {
-    /// Creates a new empty context.
+    /// Create a new empty context.
     pub fn new() -> Self {
         Env {
-            global_ns: RollerNamespace::new(),
-            ns_stack: Vec::new(),
+            // create the global namespace
+            ns_stack: vec![RollerNamespace::new()],
         }
     }
 
-    /// Inserts the variable `id` with `value`.
+    /// Insert the variable `id` with `value`.
     /// 
-    /// Checks if a local namespace exists and inserts there if it does.
-    /// Otherwise inserts the variable to the global namespace.
+    /// Inserts to the current namespace, which might be the global namespace.
+    /// Returns the old value if any,
     pub fn insert(&mut self, id: IdType, value: Value) -> Option<Value> {
-        self.ns_stack.last_mut().unwrap_or(&mut self.global_ns)
-            .insert(id, value)
+        self.ns_stack.last_mut().unwrap().insert(id, value)
     }
 
     /// Get a refence to a variable with name id.
     /// 
-    /// Checks the local namespace first, then if it doesn't exist, the global.
+    /// Only checks the current namespace, which might be the global namespace.
     fn var(&self, id: &str) -> Result<&Value> {
-        self.ns_stack.last().unwrap_or(&self.global_ns).var(id)
+        self.ns_stack.last().unwrap().var(id)
     }
 
-    /// Evaluates the expression and returns a printable message.
+    /// Evaluate the expression and return a printable message.
     pub fn eval_print(&mut self, ast: &Expr) -> String {
         match self.eval(ast) {
             Ok(val) => {
@@ -88,7 +91,7 @@ impl Env {
         }
     }
 
-    /// Evaluates the expression and returns the resulting value.
+    /// Evaluate the expression and return the resulting value.
     pub fn eval(&mut self, expr: &Expr) -> Result<Value> {
         match expr {
             &Expr::Val(Value::Func(ref fun_def)) => {
@@ -167,7 +170,7 @@ impl Env {
         }
     }
 
-    /// Evaluates a function call.
+    /// Evaluate a function call.
     fn eval_call(&mut self, call: &FunCall) -> Result<Value> {
         // evaluate arguments first
         let mut vals = Vec::with_capacity(call.args.len());

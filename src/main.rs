@@ -12,6 +12,7 @@ extern crate rustyline;
 extern crate num;
 extern crate regex;
 
+// TODO: rework the module files when the new module RFC lands
 mod error;
 mod value;
 mod op;
