@@ -17,7 +17,7 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * None (`none`)
     * Boolean (`true`, `false`)
     * Numerals
-        * 32-bit ratios atm
+        * Only 32-bit ratios atm
         * Accepts exponent syntax, like `2.3e4` or `1e-2`
     * Strings
         * No string operations yet
@@ -59,16 +59,20 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
 * Error catching and throwing
 * Command-line arguments and REPL-variables
     * Will use Clap
-* Collection indexing and other collection operations
+    * Currently always prints debug representations of the tokens and the AST unless those prints are commented
 * Control structures and a solution for sequential code execution (code blocks? semicolon operator? just use lists?)
-* String operations
+* Builtin functions
+    * `print`, `println`, `read` and `readln`
+        * Could input reading operations exploit the lexer?
+    * String operations
+    * Collection operations
 * Piecewise and assignment operations
     * Easy to implement
 * Distribution operations
     * Print distributions nicely, show probabilities, and resolve random outputs
 * Integer logical operations, including bitshifts and maybe rotations
     * Would work best with the type system (these are not defined for ratios)
-* Type system, type declarations
+* Type system, type constraints
     * Pretty big one
     * Probably after finishing the "MVP"
 * List comprehensions
@@ -80,8 +84,13 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Floats
     * Might need the type system for most idiomatic implementation
 * Maybe use reference counted or copy-on-write values, or maybe even garbage collecting
+    * Current implementation is pretty inefficient and copies data a lot
 * References
     * Maybe even move from copy-semantics to reference-semantics
+* Symbol prefix operators/function values
+    * Prefixed with the backtick (`` `)
+* Identifier infix operators
+    * Also prefixed with the backtick
 * Some unit tests...
 
 ## Possible plans for future
@@ -92,4 +101,7 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Interpreter and REPL
 * Dynamic library loading
 * Module/library system
+    * Move builtins into prelude module
+* Physical unit system/library
+    * Bits and bytes, with SI and mebi- kibi- etc prefixes might be built-in
 * LLVM IR compiler frontend

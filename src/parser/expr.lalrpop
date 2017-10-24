@@ -37,14 +37,14 @@ extern {
         ":" => Token::Colon,
         ";" => Token::Semicolon,
         "|" => Token::Alternate,
-        "local" => Token::Local,
         "global" => Token::Global,
+        "local" => Token::Local,
         "none" => Token::None,
         boolean => Token::Bool(<bool>),
         num => Token::Num(<Ratio<i32>>),
         string => Token::Str(<String>),
         identifier => Token::Id(<String>),
-        end => Token::End
+        END => Token::End
     }
 }
 
@@ -87,18 +87,30 @@ tier<Op, NextTier>: Expr = {
     NextTier
 };
 
-// without this lalrpop ignores rest of the input if we found a rule match
-pub line: Expr = <expr> end => <>;
+// without END lalrpop ignores rest of the input if we found a rule match
+pub line: Expr = {
+    <expr> END => <>,
+    <stmt> END => <>,
+};
 
 expr: Expr = {
     tier_1_op => <>,
-    statement => <>,
-
     "is" <e: comp_expr> => e,
 };
 
-statement: Expr = {
-    <lhs: identifier> "=" <e: expr> => Expr::Assign(lhs, Box::new(e)),
+stmt: Expr = {
+    // assignment
+    <lhs: lvalue> "=" <rhs: expr> => Expr::Assign(lhs, Box::new(rhs)),
+};
+
+lvalue: LValue = {
+    <vis: lvalue_visibility?> <root: identifier> <trail: ("." <value>)*> =>
+        LValue::new(vis, root, trail),
+};
+
+lvalue_visibility: LValVis = {
+    "global" => LValVis::Global,
+    "local" => LValVis::Local,
 };
 
 // precedence levels

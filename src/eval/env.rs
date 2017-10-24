@@ -1,7 +1,7 @@
 use std::collections::{BTreeSet, BTreeMap};
 
 use error::{EvalError, Result};
-use ast::{Expr, FunCall};
+use ast::{Expr, FunCall, LValue};
 use value::{Value, IdType};
 use op::{OpCode, CompOp};
 
@@ -32,6 +32,13 @@ impl RollerNamespace {
             EvalError::var_not_found(id)
         )
     }
+
+    /// Return an mutable reference to a variable.
+    pub fn var_mut(&mut self, id: &str) -> Result<&mut Value> {
+        self.variables.get_mut(id).ok_or(
+            EvalError::var_not_found(id)
+        )
+    }
 }
 
 /// The script's running environment.
@@ -58,11 +65,40 @@ impl Env {
         self.ns_stack.last_mut().unwrap().insert(id, value)
     }
 
-    /// Get a refence to a variable with name id.
+    /// Get a refence to the variable with name `id`.
     /// 
     /// Only checks the current namespace, which might be the global namespace.
     fn var(&self, id: &str) -> Result<&Value> {
         self.ns_stack.last().unwrap().var(id)
+    }
+
+    /// Get a reference to the global variable with the name `id`.
+    fn var_global(&self, id: &str) -> Result<&Value> {
+        self.ns_stack[0].var(id)
+    }
+
+    /// Get a mutable refence to a variable with name id.
+    /// 
+    /// Only checks the current namespace, which might be the global namespace.
+    /// 
+    /// If `insert` is true then the value is added with `none` value.
+    fn var_mut(&mut self, id: &str, insert: bool) -> Result<&mut Value> {
+        if insert {
+            self.ns_stack[0].insert(id.to_string(), Value::None);
+        }
+        self.ns_stack.last_mut().unwrap().var_mut(id)
+    }
+
+    /// Get a mutable refence to a variable with name id.
+    /// 
+    /// Only checks the current namespace, which might be the global namespace.
+    /// 
+    /// If `insert` is true then the value is added with `none` value.
+    fn var_mut_global(&mut self, id: &str, insert: bool) -> Result<&mut Value> {
+        if insert {
+            self.ns_stack[0].insert(id.to_string(), Value::None);
+        }
+        self.ns_stack[0].var_mut(id)
     }
 
     /// Evaluate the expression and return a printable message.
@@ -81,8 +117,7 @@ impl Env {
 
                 // print differently according to what we did at AST root
                 match ast {
-                    &Expr::Assign(ref id, _) =>
-                        format!("`{}` is now {}", id, val_str),
+                    &Expr::Assign(_, _) => format!(""),
                     &Expr::Id(ref id) => format!("`{}` is {}", id, val_str),
                     _ => format!("{}", val_str),
                 }
@@ -102,11 +137,10 @@ impl Env {
             &Expr::Val(ref x) => Ok(x.clone()),
             &Expr::Id(ref x) => self.var(x).map(|x| x.clone()),
             &Expr::Op(ref fun_call) => self.eval_call(fun_call),
-            &Expr::Assign(ref id, ref expr) => {
-                // assign a value and return it
-                let val = self.eval(&*expr)?;
-                self.insert(id.to_owned(), val.clone());
-                return Ok(val);
+            &Expr::Assign(ref lval, ref rhs) => {
+                // assign a value
+                *self.eval_lvalue(&*lval)? = self.eval(&*rhs)?;
+                return Ok(Value::None);
             },
             &Expr::List(ref x) => Ok(Value::List(
                 x.iter().map(|x| self.eval(x)).collect::<Result<Vec<_>>>()?
@@ -212,125 +246,7 @@ impl Env {
         }
         
         match &call.code {
-            &OpCode::Expr(ref e) => {
-                // is it possible to avoid the clone?
-                match self.eval(e)? {
-                    // evaluate a function call
-                    Value::Func(fun_def) => {
-                        // the function's local namespace
-                        let mut ns = RollerNamespace::new();
-
-                        // iterator for names
-                        let mut name_iter = fun_def.arg_names.iter();
-                        // iterator for ordered values
-                        let vals_len = vals.len(); // used in an error msg
-                        let val_iter = vals.into_iter();
-
-                        // we don't use name_iter.zip(val_iter) since zip
-                        // consumes the iterators and we want to use name_iter
-                        // after this loop
-                        for val in val_iter {
-                            let name = name_iter.next().ok_or(
-                                // we ran out of parameters to fill!
-                                EvalError::invalid_arg(&format!(
-                                    "expected {} arguments, got too many \
-                                    ordered arguments ({})",
-                                    fun_def.arg_names.len(), vals_len
-                                ))
-                            )?;
-
-                            if ns.insert(name.clone(), val).is_some() {
-                                // if we validate function definitions we
-                                // should never get here
-                                panic!(
-                                    "function has argument named `{}` more \
-                                    than once!", name
-                                );
-                            }
-                        }
-                        
-                        // read the rest of the defined arguments and pass 
-                        // values from keyword arguments
-                        for name in name_iter {
-                            // remove the values so in the end we can see if
-                            // we had any extra arguments by checking length
-                            let val = kw_vals.remove(name).ok_or(
-                                EvalError::invalid_arg(&format!(
-                                    "argument `{}` not defined", name
-                                ))
-                            )?;
-
-                            ns.insert(name.clone(), val).ok_or(
-                                EvalError::invalid_arg(&format!(
-                                    "tried to pass argument {} twice", name
-                                ))
-                            )?;
-                        }
-
-                        if !kw_vals.is_empty() {
-                            return Err(EvalError::invalid_arg(&format!(
-                                "got {} extra keyword arguments", kw_vals.len()
-                            )));
-                        }
-
-                        // push a new 'stack frame'
-                        // TODO: implement max call stack size and check it here
-                        self.ns_stack.push(ns);
-                        let return_value = self.eval(&fun_def.body);
-                        self.ns_stack.pop();
-                        return_value  // pun not intended
-                    },
-                    // evaluate a list indexing
-                    Value::List(vec) => {
-                        if vals.len() != 1 {
-                            Err(EvalError::invalid_arg(&format!(
-                                "got {} ordered arguments for list indexing, \
-                                expected one", vals.len()
-                            )))
-                        } else if kw_vals.len() != 0 {
-                            Err(EvalError::invalid_arg(&format!(
-                                "got {} named arguments for list indexing, \
-                                expected none", kw_vals.len()
-                            )))
-                        } else {
-                            match vals[0] {
-                                Value::Num(x) if x.is_integer() => {
-                                    // negative indexes start from the end
-                                    let idx =
-                                        if *x.numer() < 0 &&
-                                            (-*x.numer() as usize) <= vec.len()
-                                        {
-                                            // Thanks to Rust's paranoid view
-                                            // of integer overflows this next
-                                            // line's bug would've probably gone
-                                            // unnoticed.
-                                            vec.len() - (-*x.numer()) as usize
-                                        } else {
-                                            *x.numer() as usize
-                                        };
-                                    
-                                    if let Some(indexed_value) = vec.get(idx) {
-                                        // TODO remove clone, some day...
-                                        Ok(indexed_value.clone())
-                                    } else {
-                                        Err(EvalError::invalid_arg(&format!(
-                                            "index {} is out of bounds", x
-                                        )))
-                                    }
-                                },
-                                _ => Err(EvalError::unexpected_type(&format!(
-                                    "expected an integer numeral argument for \
-                                    list indexing, got {}", vals[0]
-                                )))
-                            }
-                        }
-                    },
-                    // we can't call this if it's not a function or a container
-                    val => Err(EvalError::unexpected_type(&format!(
-                        "expected a function value, got value {}", val 
-                    )))
-                }
-            },
+            &OpCode::Expr(ref e) => self.eval_expr_call(e, vals, kw_vals),
             &OpCode::Not =>
                 if vals.len() != 1 {
                     Err(EvalError::invalid_arg(&format!(
@@ -356,6 +272,147 @@ impl Env {
             &OpCode::Div => acc_op(&call.code, vals, Value::div),
             &OpCode::Pow => acc_op(&call.code, vals, Value::pow),
         }
+    }
+
+    fn eval_expr_call(&mut self,
+                    expr: &Expr,
+                    vals: Vec<Value>,
+                    kw_vals: BTreeMap<&String, Value>) -> Result<Value>
+    {
+        // move to mutable
+        let mut kw_vals = kw_vals;
+
+        match self.eval(expr)? {
+            // evaluate a function call
+            Value::Func(fun_def) => {
+                // the function's local namespace
+                let mut ns = RollerNamespace::new();
+
+                // iterator for names
+                let mut name_iter = fun_def.arg_names.iter();
+                // iterator for ordered values
+                let vals_len = vals.len(); // used in an error msg
+                let val_iter = vals.into_iter();
+
+                // we don't use name_iter.zip(val_iter) since zip
+                // consumes the iterators and we want to use name_iter
+                // after this loop
+                for val in val_iter {
+                    let name = name_iter.next().ok_or(
+                        // we ran out of parameters to fill!
+                        EvalError::invalid_arg(&format!(
+                            "expected {} arguments, got too many \
+                            ordered arguments ({})",
+                            fun_def.arg_names.len(), vals_len
+                        ))
+                    )?;
+
+                    if ns.insert(name.clone(), val).is_some() {
+                        // if we validate function definitions we
+                        // should never get here
+                        panic!(
+                            "function has argument named `{}` more \
+                            than once!", name
+                        );
+                    }
+                }
+                
+                // read the rest of the defined arguments and pass 
+                // values from keyword arguments
+                for name in name_iter {
+                    // remove the values so in the end we can see if
+                    // we had any extra arguments by checking length
+                    let val = kw_vals.remove(name).ok_or(
+                        EvalError::invalid_arg(&format!(
+                            "argument `{}` not defined", name
+                        ))
+                    )?;
+
+                    ns.insert(name.clone(), val).ok_or(
+                        EvalError::invalid_arg(&format!(
+                            "tried to pass argument {} twice", name
+                        ))
+                    )?;
+                }
+
+                if !kw_vals.is_empty() {
+                    return Err(EvalError::invalid_arg(&format!(
+                        "got {} extra keyword arguments", kw_vals.len()
+                    )));
+                }
+
+                // push a new 'stack frame'
+                // TODO: implement max call stack size and check it here
+                self.ns_stack.push(ns);
+                let return_value = self.eval(&fun_def.body);
+                self.ns_stack.pop();
+                return_value  // pun not intended
+            },
+            // evaluate a list indexing
+            mut indexable => 
+                if vals.len() != 1 {
+                    Err(EvalError::invalid_arg(&format!(
+                        "got {} ordered arguments for list indexing, \
+                        expected one", vals.len()
+                    )))
+                } else if kw_vals.len() != 0 {
+                    Err(EvalError::invalid_arg(&format!(
+                        "got {} named arguments for list indexing, \
+                        expected none", kw_vals.len()
+                    )))
+                } else {
+                    indexable.index_mut(&vals[0], false).map(|x| x.clone())
+                },
+        }
+    }
+
+    fn eval_lvalue(&mut self, lval: &LValue) -> Result<&mut Value> {
+        use ast::LValVis::*;
+
+        // if we insert a singular variable
+        let insert_var = lval.insert && lval.trail.is_empty();
+
+        // get the root value
+        let mut val: *mut Value =
+            match lval.visibility {
+                Global => self.var_mut_global(&lval.root, insert_var)?,
+                Local => self.var_mut(&lval.root, insert_var)?,
+            };
+        
+        if insert_var {
+            // no reason to check the trail anymore, our job here is done
+            return Ok( unsafe { &mut *val } );
+        }
+        
+        // check the trail of values
+        let trail =
+            if lval.insert {
+                // the last is where we will insert
+                &lval.trail[0..lval.trail.len()-1]
+            } else {
+                &lval.trail
+            };
+        
+        for expr in trail.iter() {
+            let index_val = match expr {
+                // treat identifiers as strings instead of variables, like in js
+                &Expr::Id(ref s) => Value::Str(s.clone()),
+                _ => self.eval(expr)?
+            };
+            // advance to next indexable
+            // TODO: check a way to remove this unsafe
+            val = unsafe { (*val).index_mut(&index_val, false)? };
+        }
+
+        if lval.insert {
+            // insert the value to the last position
+            let index_val = self.eval(trail.last().unwrap())?;
+            val = unsafe { (*val).index_mut(&index_val, true)? };
+        }
+
+        let val = unsafe { &mut *val };
+        // the final value
+        Ok(val)
     }
 
 }

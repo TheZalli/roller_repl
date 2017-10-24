@@ -90,6 +90,64 @@ impl Value {
 
         Value::Str(out_str)
     }
+
+    /// Indexes the value and returns an immutable reference to the indexed 
+    /// value.
+    /// 
+    /// If `insert` is true, the value is inserted or replaced.
+    /// 
+    // Works for collections.
+    pub fn index_mut(&mut self, arg: &Value, insert: bool)
+            -> Result<&mut Value>
+    {
+        match self {
+            &mut Value::List(ref mut vec) => {
+                match arg {
+                    &Value::Num(x) if x.is_integer() => {
+                        // negative indexes start from the end
+                        let idx =
+                            if *x.numer() < 0 &&
+                                (-*x.numer() as usize) <= vec.len()
+                            {
+                                // Thanks to Rust's paranoid view
+                                // of integer overflows this next
+                                // line's bug would've probably gone
+                                // unnoticed.
+                                vec.len() - (-*x.numer()) as usize
+                            } else {
+                                *x.numer() as usize
+                            };
+                        
+                        if let Some(indexed_value) = vec.get_mut(idx) {
+                            // TODO remove clone, some day...
+                            Ok(indexed_value)
+                        } else {
+                            Err(EvalError::invalid_arg(&format!(
+                                "index {} is out of bounds", x
+                            )))
+                        }
+                    },
+                    _ => Err(EvalError::unexpected_type(&format!(
+                        "expected an integer numeral argument for \
+                        list indexing, got {}", arg
+                    )))
+                }
+            },
+            &mut Value::Map(ref mut map) => {
+                if insert {
+                    Ok(map.entry(arg.clone()).or_insert(Value::None))
+                } else {
+                    map.get_mut(arg).ok_or(EvalError::invalid_arg(&format!(
+                        "key `{}` not found in map", arg
+                    )))
+                }
+            },
+            // we can't call this if it's not a function or a container
+            val => Err(EvalError::unexpected_type(&format!(
+                    "expected indexable value, got value {}", val
+                )))
+        }
+    }
     
     /// Perform negation operation for one numeral value.
     pub fn neg(&self) -> Result<Value> {

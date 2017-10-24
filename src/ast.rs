@@ -14,8 +14,8 @@ pub enum Expr {
     Val(Value),
     /// Identifier reference
     Id(IdType),
-    /// Variable assignment
-    Assign(IdType, Box<Expr>),
+    /// Value assignment
+    Assign(LValue, Box<Expr>),
     /// Comparison
     Comp {
         op: CompOp,
@@ -32,6 +32,44 @@ pub enum Expr {
     /// Control structures.
     Ctrl(Control),
     Distribution(Vec<(Expr, Expr)>),
+}
+
+/// An lvalue reference that can be used to mutate values
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LValue {
+    /// Where is this variable visible in.
+    pub visibility: LValVis,
+    /// The first variable part.
+    pub root: IdType,
+    /// Rest of the dot-separated list parts.
+    pub trail: Vec<Expr>,
+    /// Whether we should declare the variable?
+    pub insert: bool,
+}
+
+impl LValue {
+    /// Creates a new `LValue`.
+    /// 
+    /// If visibility is `None` the default of `LValVis::Local` is used.
+    /// If visibility is not `None` however, the value will be inserted into 
+    /// the namespace as new (declared).
+    pub fn new(visibility: Option<LValVis>, root: IdType, trail: Vec<Expr>) -> Self {
+        LValue {
+            visibility: visibility.unwrap_or(LValVis::Local),
+            root: root,
+            trail: trail,
+            insert: visibility.is_some(),
+        }
+    }
+}
+
+/// Visibility of a lvalue reference.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LValVis {
+    /// Global namespace
+    Global,
+    /// Local namespace
+    Local,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -97,5 +135,18 @@ impl fmt::Display for Expr {
             &Expr::Id(ref x) => write!(f, "{}", x),
             _ => write!(f, "{:?}", self) // TODO
         }
+    }
+}
+
+impl fmt::Display for LValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let LValVis::Global = self.visibility {
+            write!(f, "global.")?;
+        }
+        write!(f, "{}", self.root)?;
+        for part in self.trail.iter() {
+            write!(f, ".{}", part)?;
+        }
+        Ok(())
     }
 }

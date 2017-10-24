@@ -30,22 +30,24 @@ macro_rules! impl_err_kind_builder {
 }
 
 impl EvalError {
-    impl_err_kind_builder!(invalid_arg, InvalidArgument);
-    impl_err_kind_builder!(unsupported_op, UnsupportedOperation);
-    impl_err_kind_builder!(arithm_error, ArithmeticError);
-    impl_err_kind_builder!(var_not_found, VariableNotFound,
-        |id| format!("variable `{}` not found in this context", id)
-    );
-    impl_err_kind_builder!(unexpected_type, UnexpectedType);
-    impl_err_kind_builder!(unimplemented, Unimplemented);
-
-    pub fn custom(custom_kind: &str, msg: &str) -> Self {
+    pub fn new_from_str_pair(kind: &str, msg: &str) -> Self {
         EvalError {
-            kind: EvalErrorKind::Custom(custom_kind.to_owned()),
+            kind: EvalErrorKind::from_str(kind).unwrap(),
             message: msg.to_owned(),
         }
     }
 
+    impl_err_kind_builder!(invalid_arg, InvalidArgument);
+    impl_err_kind_builder!(unsupported_op, UnsupportedOperation);
+    impl_err_kind_builder!(arithm_error, ArithmeticError);
+    impl_err_kind_builder!(var_not_found, ValueNotFound,
+        |id| format!("variable `{}` not found in this context", id)
+    );
+    impl_err_kind_builder!(val_not_found, ValueNotFound,
+        |id| format!("value `{}` not found in this context", id)
+    );
+    impl_err_kind_builder!(unexpected_type, UnexpectedType);
+    impl_err_kind_builder!(unimplemented, Unimplemented);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -53,7 +55,7 @@ pub enum EvalErrorKind {
     InvalidArgument,
     UnsupportedOperation,
     ArithmeticError,
-    VariableNotFound,
+    ValueNotFound,
     UnexpectedType,
     Unimplemented,
     /// Remember to check that the name is not the same as one of above
@@ -68,7 +70,7 @@ impl FromStr for EvalErrorKind {
             "InvalidArgument" => InvalidArgument,
             "UnsupportedOperation" => UnsupportedOperation,
             "ArithmeticError" => ArithmeticError,
-            "VariableNotFound" => VariableNotFound,
+            "ValueNotFound" => ValueNotFound,
             "UnexpectedType" => UnexpectedType,
             "Unimplemented" => Unimplemented,
             _ => Custom(s.to_string())
