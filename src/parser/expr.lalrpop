@@ -90,12 +90,12 @@ tier<Op, NextTier>: Expr = {
 // without END lalrpop ignores rest of the input if we found a rule match
 pub line: Expr = {
     <expr> END => <>,
-    <stmt> END => <>,
 };
 
 expr: Expr = {
     tier_1_op => <>,
     "is" <e: comp_expr> => e,
+    <stmt> => <>,
 };
 
 stmt: Expr = {

@@ -84,7 +84,8 @@ impl Env {
     /// If `insert` is true then the value is added with `none` value.
     fn var_mut(&mut self, id: &str, insert: bool) -> Result<&mut Value> {
         if insert {
-            self.ns_stack[0].insert(id.to_string(), Value::None);
+            self.ns_stack.last_mut().unwrap()
+                .insert(id.to_string(), Value::None);
         }
         self.ns_stack.last_mut().unwrap().var_mut(id)
     }
