@@ -370,7 +370,7 @@ impl Env {
         use ast::LValVis::*;
 
         // if we insert a singular variable
-        let insert_var = lval.insert && lval.trail.is_empty();
+        let insert_var = lval.trail.is_empty() && lval.insert;
 
         // get the root value
         let mut val: *mut Value =
@@ -379,11 +379,11 @@ impl Env {
                 Local => self.var_mut(&lval.root, insert_var)?,
             };
         
-        if insert_var {
+        if lval.trail.is_empty() {
             // no reason to check the trail anymore, our job here is done
             return Ok( unsafe { &mut *val } );
         }
-        
+
         // check the trail of values
         let trail =
             if lval.insert {
@@ -414,5 +414,4 @@ impl Env {
         // the final value
         Ok(val)
     }
-
 }

@@ -91,13 +91,13 @@ lazy_static! {
 
     static ref LINE_COMMENT_REGEX: Regex = Regex::new(r"^//").unwrap();
     static ref BLOCK_COMMENT_START_REGEX: Regex =
-        Regex::new(r"^[\s&&[^\n]]*/\*").unwrap();
+        Regex::new(r"^.*?/\*").unwrap();
     static ref BLOCK_COMMENT_END_REGEX: Regex =
         Regex::new(r"^.*?\*/").unwrap();
 }
 
 #[derive(Clone)]
-pub struct Lexer {
+pub struct Lexer { 
     regex_set: RegexSet,
     token_rules: Vec<(Regex, &'static Fn(&str) -> Token)>,
 }
@@ -333,23 +333,24 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
             return None;
         }
 
-        if let Some(ma) = BLOCK_COMMENT_START_REGEX.find(self.input) {
-            // started a block comment
-            self.consume(ma.end());
-            self.block_comment_depth += 1;
-            if self.block_comment_depth >= u8::max_value() {
-                return Some(Err(LexError::MaximumCommentDepthReached));
-            }
-        }
-
-        while self.block_comment_depth > 0 {
-            // check for block comment ends in this line
-            if let Some(ma) = BLOCK_COMMENT_END_REGEX.find(self.input) {
+        loop {
+            if let Some(ma) = BLOCK_COMMENT_START_REGEX.find(self.input) {
+                // started a block comment
+                self.consume(ma.end());
+                self.block_comment_depth += 1;
+                if self.block_comment_depth >= u8::max_value() {
+                    return Some(Err(LexError::MaximumCommentDepthReached));
+                }
+            } else if let Some(ma) = BLOCK_COMMENT_END_REGEX.find(self.input) {
+                // check for block comment ends in this line
                 // found a comment end
                 self.consume(ma.end());
                 self.block_comment_depth -= 1;
+            } else if self.block_comment_depth <= 0 {
+                break;
             } else {
-                // another end not found on this line, continue on the next line
+                // another end or start not found on this line,
+                // continue on the next line
                 self.terminate = true;
                 return Some(Ok((
                     Loc::new(self.line_num, self.consumed, self.consumed),
