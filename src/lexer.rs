@@ -79,6 +79,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
         "throw" => Token::Throw,
         "global" => Token::Global,
         "local" => Token::Local,
+        "var" => Token::Var,
         "none" => Token::None,
         "true" => Token::Bool(true),
         "false" => Token::Bool(false),
@@ -227,6 +228,7 @@ pub enum Token {
     Throw,
     Global,
     Local,
+    Var,
     None,
     /// Boolean value, `true` or `false`
     Bool(bool),

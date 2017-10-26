@@ -39,6 +39,7 @@ extern {
         "|" => Token::Alternate,
         "global" => Token::Global,
         "local" => Token::Local,
+        "var" => Token::Var,
         "none" => Token::None,
         boolean => Token::Bool(<bool>),
         num => Token::Num(<Ratio<i32>>),
@@ -111,6 +112,7 @@ lvalue: LValue = {
 lvalue_visibility: LValVis = {
     "global" => LValVis::Global,
     "local" => LValVis::Local,
+    "var" => LValVis::Local,
 };
 
 // precedence levels
