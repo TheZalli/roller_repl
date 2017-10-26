@@ -77,9 +77,9 @@ pub enum Control {
     Break,
     Continue,
     If {
-        cond_expr: Box<Expr>,
+        cond: Box<Expr>,
         then_expr: Box<Expr>,
-        elif_exprs: Vec<Expr>,
+        //elif_exprs: Vec<Expr>,
         else_expr: Box<Expr>,
     },
     Loop {
@@ -124,6 +124,17 @@ impl FunCall {
             code: code,
             args: args,
             kw_args: kw_args,
+        }
+    }
+}
+
+impl Control {
+    pub fn new_if(cond: Expr, then_expr: Expr, else_expr: Expr) -> Self
+    {
+        Control::If {
+            cond: Box::new(cond),
+            then_expr: Box::new(then_expr),
+            else_expr: Box::new(else_expr),
         }
     }
 }

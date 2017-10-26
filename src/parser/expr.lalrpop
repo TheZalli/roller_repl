@@ -37,6 +37,9 @@ extern {
         ":" => Token::Colon,
         ";" => Token::Semicolon,
         "|" => Token::Alternate,
+        "if" => Token::If,
+        "then" => Token::Then,
+        "else" => Token::Else,
         "global" => Token::Global,
         "local" => Token::Local,
         "var" => Token::Var,
@@ -88,15 +91,30 @@ tier<Op, NextTier>: Expr = {
     NextTier
 };
 
+comp_expr: Expr =
+    <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
+        Expr::Comp {
+            op: op,
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        };
+
 // without END lalrpop ignores rest of the input if we found a rule match
 pub line: Expr = {
     <expr> END => <>,
 };
 
 expr: Expr = {
+    expr0 => <>,
+    // if structure
+    "if" <cond: comp_expr> "then" <then_part: expr> "else" <else_part: expr0> =>
+        Expr::Ctrl(Control::new_if(cond, then_part, else_part)),
+};
+
+expr0: Expr = {
+    "is" <cmp: comp_expr> => cmp,
+    stmt => <>,
     tier_1_op => <>,
-    "is" <e: comp_expr> => e,
-    <stmt> => <>,
 };
 
 stmt: Expr = {
@@ -204,10 +222,3 @@ operator_4: OpCode = {
     "^" => OpCode::Pow,
 };
 
-comp_expr: Expr =
-    <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
-        Expr::Comp {
-            op: op,
-            lhs: Box::new(lhs),
-            rhs: Box::new(rhs),
-        };
