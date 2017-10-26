@@ -20,7 +20,7 @@ impl RollerNamespace {
     }
 
     /// Inserts a new variable to the namespace.
-    /// 
+    ///
     /// Returns old value if there were any.
     pub fn insert(&mut self, id: IdType, value: Value) -> Option<Value> {
         self.variables.insert(id, value)
@@ -58,7 +58,7 @@ impl Env {
     }
 
     /// Insert the variable `id` with `value`.
-    /// 
+    ///
     /// Inserts to the current namespace, which might be the global namespace.
     /// Returns the old value if any,
     pub fn insert(&mut self, id: IdType, value: Value) -> Option<Value> {
@@ -66,7 +66,7 @@ impl Env {
     }
 
     /// Get a refence to the variable with name `id`.
-    /// 
+    ///
     /// Only checks the current namespace, which might be the global namespace.
     fn var(&self, id: &str) -> Result<&Value> {
         self.ns_stack.last().unwrap().var(id)
@@ -78,9 +78,9 @@ impl Env {
     }
 
     /// Get a mutable refence to a variable with name id.
-    /// 
+    ///
     /// Only checks the current namespace, which might be the global namespace.
-    /// 
+    ///
     /// If `insert` is true then the value is added with `none` value.
     fn var_mut(&mut self, id: &str, insert: bool) -> Result<&mut Value> {
         if insert {
@@ -91,9 +91,9 @@ impl Env {
     }
 
     /// Get a mutable refence to a variable with name id.
-    /// 
+    ///
     /// Only checks the current namespace, which might be the global namespace.
-    /// 
+    ///
     /// If `insert` is true then the value is added with `none` value.
     fn var_mut_global(&mut self, id: &str, insert: bool) -> Result<&mut Value> {
         if insert {
@@ -234,10 +234,10 @@ impl Env {
                 let mut arg_values: VecDeque<Value> = operands.into();
 
                 // calculate result
-                let mut acc = 
+                let mut acc =
                     func(&arg_values.pop_front().unwrap(),
                         &arg_values.pop_front().unwrap())?;
-                
+
                 for val in arg_values {
                     acc = func(&acc, &val)?;
                 }
@@ -245,7 +245,7 @@ impl Env {
                 return Ok(acc);
             }
         }
-        
+
         match &call.code {
             &OpCode::Expr(ref e) => self.eval_expr_call(e, vals, kw_vals),
             &OpCode::Not =>
@@ -317,8 +317,8 @@ impl Env {
                         );
                     }
                 }
-                
-                // read the rest of the defined arguments and pass 
+
+                // read the rest of the defined arguments and pass
                 // values from keyword arguments
                 for name in name_iter {
                     // remove the values so in the end we can see if
@@ -350,7 +350,7 @@ impl Env {
                 return_value  // pun not intended
             },
             // evaluate a list indexing
-            mut indexable => 
+            mut indexable =>
                 if vals.len() != 1 {
                     Err(EvalError::invalid_arg(&format!(
                         "got {} ordered arguments for list indexing, \
@@ -379,7 +379,7 @@ impl Env {
                 Global => self.var_mut_global(&lval.root, insert_var)?,
                 Local => self.var_mut(&lval.root, insert_var)?,
             };
-        
+
         if lval.trail.is_empty() {
             // no reason to check the trail anymore, our job here is done
             return Ok( unsafe { &mut *val } );
@@ -393,7 +393,7 @@ impl Env {
             } else {
                 &lval.trail
             };
-        
+
         for expr in trail.iter() {
             let index_val = match expr {
                 // treat identifiers as strings instead of variables, like in js

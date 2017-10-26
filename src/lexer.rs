@@ -56,7 +56,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
 
     // match strings
     (r#""(.*?[^\\])?""#, &|s| Token::Str(s[1..s.len()-1].to_owned())),
-    
+
     // match identifiers and keywords
     (r"[\pL_][\pL\pN_]*", &|s| match s {
         "not" => Token::Not,
@@ -97,7 +97,7 @@ lazy_static! {
 }
 
 #[derive(Clone)]
-pub struct Lexer { 
+pub struct Lexer {
     regex_set: RegexSet,
     token_rules: Vec<(Regex, &'static Fn(&str) -> Token)>,
 }
@@ -236,7 +236,7 @@ pub enum Token {
     Str(String),
     /// Identifier
     Id(String),
-    /// A meta-token that tells to continue and to parse the next line and to 
+    /// A meta-token that tells to continue and to parse the next line and to
     /// glue it after this one. Contains the state needed for the next line.
     MetaContinueNextLine(Option<LexerState>),
     /// End of expression.
@@ -264,7 +264,7 @@ impl Lexer {
         }
     }
 
-    /// Lexes the given input into tokens and returns them and an optional 
+    /// Lexes the given input into tokens and returns them and an optional
     /// state which will be `None` if no continuation is expected, or containing
     /// the state which is needed for the next line of input.
     pub fn parse(&self, input: &str, state: LexerState) ->
@@ -274,7 +274,7 @@ impl Lexer {
         let lexed = lexed?;
 
         // check the last and the next after it token in case of continuation
-        if let Some((&(_, Token::MetaContinueNextLine(state_opt)), rest)) = 
+        if let Some((&(_, Token::MetaContinueNextLine(state_opt)), rest)) =
                lexed.split_last()
         {
             // this token having None at this execution path is not allowed
@@ -366,7 +366,7 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
         if self.input.is_empty() ||
            LINE_COMMENT_REGEX.find(self.input).is_some()
         {
-            // when the input is empty or we started a line comment, terminate 
+            // when the input is empty or we started a line comment, terminate
             // on the next iteration
             self.terminate = true;
             return Some(Ok((
@@ -377,9 +377,9 @@ impl<'a, 'b> Iterator for LexerIter<'a, 'b> {
 
         for found_index in self.lexer.regex_set.matches(self.input) {
             // found a match, now extract it since regex set can't do that
-            let &(ref regex, ref tok_fun) = 
+            let &(ref regex, ref tok_fun) =
                 &self.lexer.token_rules[found_index];
-            
+
             let ma = regex.find(self.input).unwrap();
 
             // store previous used bytes

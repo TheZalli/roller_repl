@@ -1,5 +1,5 @@
 ///! Roller REPL implementation.
-///! 
+///!
 ///! Works as a reference implementation.
 ///! To see what is and what is not implemented, check the readme.
 
@@ -77,7 +77,7 @@ fn real_main() -> i32 {
     let mut continuing = false;
     // the lexer state, for storing data between continuations
     let mut state = LexerState::repl_default();
-    
+
     // return value
     let return_status = loop {
         // read a line
@@ -161,7 +161,7 @@ fn real_main() -> i32 {
 
             Err(e) => {
                 // other error, maybe IO error
-                // in some cases we might want to continue, but we don't want 
+                // in some cases we might want to continue, but we don't want
                 // any infinite loops
                 eprintln!("Encountered error: {:?}", e);
                 break 1;
@@ -173,7 +173,7 @@ fn real_main() -> i32 {
             state = LexerState::repl_default();
         }
     }; // end of the infinite loop
-    
+
     if in_isatty {
         println!("Exiting");
     }

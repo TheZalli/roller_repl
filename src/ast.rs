@@ -49,9 +49,9 @@ pub struct LValue {
 
 impl LValue {
     /// Creates a new `LValue`.
-    /// 
+    ///
     /// If visibility is `None` the default of `LValVis::Local` is used.
-    /// If visibility is not `None` however, the value will be inserted into 
+    /// If visibility is not `None` however, the value will be inserted into
     /// the namespace as new (declared).
     pub fn new(visibility: Option<LValVis>, root: IdType, trail: Vec<Expr>) -> Self {
         LValue {
@@ -101,7 +101,7 @@ pub enum Control {
 }
 
 /// A function application with ordered and/or named arguments.
-/// 
+///
 /// Not to be confused with `PrankCall`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FunCall {

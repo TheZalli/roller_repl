@@ -75,7 +75,7 @@ sep_list_plus<T, S>: Vec<T> = {
 // comma separated list of values with optional trailing comma
 comma<T>: Vec<T> = sep_list<T, ",">;
 
-// comma separated list of values with optional trailing comma and at least 1 
+// comma separated list of values with optional trailing comma and at least 1
 // item
 comma_plus<T>: Vec<T> = sep_list_plus<T, ",">;
 

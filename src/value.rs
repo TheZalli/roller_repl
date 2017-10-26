@@ -91,11 +91,11 @@ impl Value {
         Value::Str(out_str)
     }
 
-    /// Indexes the value and returns an immutable reference to the indexed 
+    /// Indexes the value and returns an immutable reference to the indexed
     /// value.
-    /// 
+    ///
     /// If `insert` is true, the value is inserted or replaced.
-    /// 
+    ///
     // Works for collections.
     pub fn index_mut(&mut self, arg: &Value, insert: bool)
             -> Result<&mut Value>
@@ -117,7 +117,7 @@ impl Value {
                             } else {
                                 *x.numer() as usize
                             };
-                        
+
                         if let Some(indexed_value) = vec.get_mut(idx) {
                             // TODO remove clone, some day...
                             Ok(indexed_value)
@@ -148,7 +148,7 @@ impl Value {
                 )))
         }
     }
-    
+
     /// Perform negation operation for one numeral value.
     pub fn neg(&self) -> Result<Value> {
         match self {
@@ -160,22 +160,22 @@ impl Value {
     }
 
     /// Addition between types.
-    /// 
+    ///
     /// Only supported for numerals.
     impl_op!("addition", add, ops::Add::add);
 
     /// Substraction between types.
-    /// 
+    ///
     /// Only supported for numerals.
     impl_op!("substraction", sub, ops::Sub::sub);
-    
+
     /// Multiplication between types.
-    /// 
+    ///
     /// Only supported for numerals.
     impl_op!("multiplication", mul, ops::Mul::mul);
-    
+
     /// Division between types.
-    /// 
+    ///
     /// Only supported for numerals.
     pub fn div(&self, rhs: &Value) -> Result<Value> {
         match (self, rhs) {
@@ -190,9 +190,9 @@ impl Value {
             ))
         }
     }
-    
+
     /// Raising value to the power of another.
-    /// 
+    ///
     /// Only supported for numerals.
     pub fn pow(&self, rhs: &Value) -> Result<Value> {
         match (self, rhs) {
