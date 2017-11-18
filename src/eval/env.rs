@@ -1,7 +1,7 @@
 use std::collections::{BTreeSet, BTreeMap};
 
 use error::{EvalError, Result};
-use ast::{Expr, FunCall, LValue};
+use ast::{Expr, FunCall, LValue, Control};
 use value::{Value, IdType};
 use op::{OpCode, CompOp};
 
@@ -112,7 +112,7 @@ impl Env {
                     Value::Num(x) if !x.is_integer() => format!(
                         "{} (≈ {})", x, *x.numer() as f64 / *x.denom() as f64
                     ),
-                    Value::Str(s) => format!("\"{:?}\"\nPrinted:\n{}", s, s),
+                    Value::Str(s) => format!("{:?}\nPrinted:\n{}", s, s),
                     x => format!("{}", x),
                 };
 
@@ -200,6 +200,15 @@ impl Env {
                     CompOp::Gt => lhs > rhs,
                     CompOp::Gte => lhs >= rhs,
                 }))
+            },
+            &Expr::Ctrl(
+                Control::If { ref cond, ref then_expr, ref else_expr }
+            ) => {
+                match self.eval(&cond)? {
+                    Value::Bool(true) => self.eval(&then_expr),
+                    Value::Bool(false) => self.eval(&else_expr),
+                    _ => unreachable!(), // change if condition syntax changes
+                }
             },
             _ => Err(EvalError::unimplemented("")),
         }

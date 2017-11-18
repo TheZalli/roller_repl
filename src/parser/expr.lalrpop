@@ -107,7 +107,7 @@ pub line: Expr = {
 expr: Expr = {
     expr0 => <>,
     // if structure
-    "if" <cond: comp_expr> "then" <then_part: expr> "else" <else_part: expr0> =>
+    "if" <cond: comp_expr> "then" <then_part: expr> "else" <else_part: expr> =>
         Expr::Ctrl(Control::new_if(cond, then_part, else_part)),
 };
 
