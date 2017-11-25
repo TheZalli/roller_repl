@@ -7,7 +7,7 @@ use num::rational::Ratio;
 use op::{OpCode, CompOp};
 
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 35] = [
     (r"\(", &|_| Token::LParen),
     (r"\)", &|_| Token::RParen),
     (r"\[", &|_| Token::LBracket),
@@ -17,12 +17,12 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
 
     (r"->", &|_| Token::RightArrow),
 
-    (r"=", &|_| Token::Equals),
-    (r"!=", &|_| Token::Comp(CompOp::Nequals)),
     (r"<", &|_| Token::Comp(CompOp::Lt)),
     (r"<=", &|_| Token::Comp(CompOp::Lte)),
     (r">", &|_| Token::Comp(CompOp::Gt)),
     (r">=", &|_| Token::Comp(CompOp::Gte)),
+
+    (r"=", &|_| Token::Op(OpCode::Assign)),
 
     (r"\+", &|_| Token::Op(OpCode::Add)),
     (r"\*", &|_| Token::Op(OpCode::Mul)),
@@ -55,7 +55,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
     ),
 
     // match strings
-    (r#""(.*?[^\\])?""#, &|s| Token::Str(s[1..s.len()-1].to_owned())),
+    (r#""([^\\"]|\\.)*""#, &|s| Token::Str(s[1..s.len()-1].to_owned())),
 
     // match identifiers and keywords
     (r"[\pL_][\pL\pN_]*", &|s| match s {
@@ -64,6 +64,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
         "or" => Token::Op(OpCode::Or),
         "xor" => Token::Op(OpCode::Xor),
         "is" => Token::Is,
+        "isnt" => Token::Comp(CompOp::Nequals),
         "in" => Token::In,
         "if" => Token::If,
         "then" => Token::Then,
@@ -190,8 +191,6 @@ pub enum Token {
     Minus,
     /// Here because it can be a general keyword or a boolean unary operation
     Not,
-    /// `=`
-    Equals,
     /// Comparison operators, like `<`
     Comp(CompOp),
     /// Infix operators, like `+`

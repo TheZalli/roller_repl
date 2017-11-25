@@ -118,8 +118,8 @@ impl Env {
 
                 // print differently according to what we did at AST root
                 match ast {
-                    &Expr::Assign(_, _) => format!(""),
-                    &Expr::Id(ref id) => format!("`{}` is {}", id, val_str),
+                    //&Expr::Assign(_, _) => format!(""),
+                    //&Expr::Id(ref id) => format!("`{}` is {}", id, val_str),
                     _ => format!("{}", val_str),
                 }
             },
@@ -136,13 +136,7 @@ impl Env {
                 Ok(Value::Func(fun_def.clone()))
             },
             &Expr::Val(ref x) => Ok(x.clone()),
-            &Expr::Id(ref x) => self.var(x).map(|x| x.clone()),
             &Expr::Op(ref fun_call) => self.eval_call(fun_call),
-            &Expr::Assign(ref lval, ref rhs) => {
-                // assign a value
-                *self.eval_lvalue(&*lval)? = self.eval(&*rhs)?;
-                return Ok(Value::None);
-            },
             &Expr::List(ref x) => Ok(Value::List(
                 x.iter().map(|x| self.eval(x)).collect::<Result<Vec<_>>>()?
             )),
@@ -207,7 +201,9 @@ impl Env {
                 match self.eval(&cond)? {
                     Value::Bool(true) => self.eval(&then_expr),
                     Value::Bool(false) => self.eval(&else_expr),
-                    _ => unreachable!(), // change if condition syntax changes
+                    x => Err(EvalError::unexpected_type(&format!(
+                        "expected a boolean value, got {}", x
+                    )))
                 }
             },
             _ => Err(EvalError::unimplemented("")),
@@ -257,6 +253,7 @@ impl Env {
 
         match &call.code {
             &OpCode::Expr(ref e) => self.eval_expr_call(e, vals, kw_vals),
+            &OpCode::Assign => unimplemented!(),
             &OpCode::Not =>
                 if vals.len() != 1 {
                     Err(EvalError::invalid_arg(&format!(
@@ -404,11 +401,7 @@ impl Env {
             };
 
         for expr in trail.iter() {
-            let index_val = match expr {
-                // treat identifiers as strings instead of variables, like in js
-                &Expr::Id(ref s) => Value::Str(s.clone()),
-                _ => self.eval(expr)?
-            };
+            let index_val = self.eval(expr)?;
             // advance to next indexable
             // TODO: check a way to remove this unsafe
             val = unsafe { (*val).index_mut(&index_val, false)? };

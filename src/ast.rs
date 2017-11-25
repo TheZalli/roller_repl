@@ -12,10 +12,6 @@ use op::{OpCode, CompOp};
 pub enum Expr {
     /// Value literal
     Val(Value),
-    /// Identifier reference
-    Id(IdType),
-    /// Value assignment
-    Assign(LValue, Box<Expr>),
     /// Comparison
     Comp {
         op: CompOp,
@@ -60,6 +56,11 @@ impl LValue {
             trail: trail,
             insert: visibility.is_some(),
         }
+    }
+
+    /// Returns true if this LValue refers to a global value.
+    pub fn is_global(&self) -> bool {
+        self.visibility == LValVis::Global
     }
 }
 
@@ -143,7 +144,6 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &Expr::Val(ref x) => write!(f, "{}", x),
-            &Expr::Id(ref x) => write!(f, "{}", x),
             _ => write!(f, "{:?}", self) // TODO
         }
     }

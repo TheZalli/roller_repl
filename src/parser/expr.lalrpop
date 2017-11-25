@@ -17,14 +17,14 @@ extern {
         "}" => Token::RBrace,
         "->" => Token::RightArrow,
         "-" => Token::Minus,
-        "is" => Token::Is,
         "not" => Token::Not,
-        "=" => Token::Equals,
-        "!=" => Token::Comp(CompOp::Nequals),
+        "is" => Token::Is,
+        "isnt" => Token::Comp(CompOp::Nequals),
         "<"  => Token::Comp(CompOp::Lt),
         "<=" => Token::Comp(CompOp::Lte),
         ">"  => Token::Comp(CompOp::Gt),
         ">=" => Token::Comp(CompOp::Gte),
+        "=" => Token::Op(OpCode::Assign),
         "and" => Token::Op(OpCode::And),
         "or" => Token::Op(OpCode::Or),
         "xor" => Token::Op(OpCode::Xor),
@@ -92,7 +92,7 @@ tier<Op, NextTier>: Expr = {
 };
 
 comp_expr: Expr =
-    <lhs: tier_1_op> <op: comp_operator> <rhs: tier_1_op> =>
+    <lhs: expr1> <op: comp_operator> <rhs: expr1> =>
         Expr::Comp {
             op: op,
             lhs: Box::new(lhs),
@@ -106,51 +106,45 @@ pub line: Expr = {
 
 expr: Expr = {
     expr0 => <>,
+    <cmp: comp_expr> => cmp,
     // if structure
-    "if" <cond: comp_expr> "then" <then_part: expr> "else" <else_part: expr> =>
+    "if" <cond: expr> "then" <then_part: expr> "else" <else_part: expr> =>
         Expr::Ctrl(Control::new_if(cond, then_part, else_part)),
 };
 
 expr0: Expr = {
-    "is" <cmp: comp_expr> => cmp,
-    stmt => <>,
-    tier_1_op => <>,
-};
-
-stmt: Expr = {
-    // assignment
-    <lhs: lvalue> "=" <rhs: expr> => Expr::Assign(lhs, Box::new(rhs)),
-};
-
-lvalue: LValue = {
-    <vis: lvalue_visibility?> <root: identifier> <trail: ("." <value>)*> =>
-        LValue::new(vis, root, trail),
-};
-
-lvalue_visibility: LValVis = {
-    "global" => LValVis::Global,
-    "local" => LValVis::Local,
-    "var" => LValVis::Local,
+    // right-associative
+    <lhs: expr1> "=" <rhs: expr0> => {
+        Expr::Op(FunCall::new(OpCode::Assign, vec![lhs, rhs], vec![]))
+    },
+    expr1 => <>,
 };
 
 // precedence levels
-tier_1_op: Expr = tier<operator_1, tier_2_op>;
-tier_2_op: Expr = tier<operator_2, tier_3_op>;
-tier_3_op: Expr = tier<operator_3, tier_4_op>;
-tier_4_op: Expr = tier<operator_4, tier_5_op>;
+expr1: Expr = tier<operator_1, expr2>;
+expr2: Expr = tier<operator_2, expr3>;
+expr3: Expr = tier<operator_3, expr4>;
 
-tier_5_op: Expr = {
-    "-" <e: tier_6_op> => Expr::Op(
-        FunCall::new(OpCode::Neg, vec![e], vec![])
-    ),
-    "not" <e: tier_6_op> => Expr::Op(
-        FunCall::new(OpCode::Not, vec![e], vec![])
-    ),
-    tier_6_op => <>,
+expr4: Expr = {
+    // right-associative
+    <lhs: expr5> "^" <rhs: expr4> => {
+        Expr::Op(FunCall::new(OpCode::Pow, vec![lhs, rhs], vec![]))
+    },
+    expr5 => <>,
 };
 
-tier_6_op: Expr = {
-    <e: tier_6_op> "(" <args: comma<expr>> ")" => Expr::Op(
+expr5: Expr = {
+    "-" <e: expr6> => Expr::Op(
+        FunCall::new(OpCode::Neg, vec![e], vec![])
+    ),
+    "not" <e: expr6> => Expr::Op(
+        FunCall::new(OpCode::Not, vec![e], vec![])
+    ),
+    expr6 => <>,
+};
+
+expr6: Expr = {
+    <e: expr6> "(" <args: comma<expr>> ")" => Expr::Op(
         FunCall::new(OpCode::Expr(Box::new(e)), args, vec![])
     ),
     value => <>,
@@ -167,7 +161,7 @@ alt_item: (Expr, Expr) = {
 
 value: Expr = {
     term => Expr::Val(<>),
-    identifier => Expr::Id(<>),
+    lvalue => Expr::Val(Value::LVal(<>)),
     "[" <comma<expr>> "]" => Expr::List(<>),
     "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
     "{" ":" ","? "}" => Expr::Map(vec![].into_iter().collect()), // empty map
@@ -186,6 +180,22 @@ value: Expr = {
     "(" <expr> ")" => <>,
 };
 
+lval_item: Expr = {
+    identifier => Expr::Val(Value::Str(<>)),
+    term => Expr::Val(<>),
+};
+
+lvalue: LValue = {
+    <vis: (<lvalue_visibility> ".")?> <root: identifier>
+        <trail: ("." <lval_item>)*> =>
+        LValue::new(vis, root, trail),
+};
+
+lvalue_visibility: LValVis = {
+    "global" => LValVis::Global,
+    "local" => LValVis::Local,
+};
+
 term: Value = {
     "none" => Value::None,
     boolean => Value::Bool(<>),
@@ -194,8 +204,8 @@ term: Value = {
 };
 
 comp_operator: CompOp = {
-    "=" => CompOp::Equals,
-    "!=" => CompOp::Nequals,
+    "is" => CompOp::Equals,
+    "isnt" => CompOp::Nequals,
     "<" => CompOp::Lt,
     "<=" => CompOp::Lte,
     ">" => CompOp::Gt,
@@ -217,8 +227,3 @@ operator_3: OpCode = {
     "*" => OpCode::Mul,
     "/" => OpCode::Div,
 };
-
-operator_4: OpCode = {
-    "^" => OpCode::Pow,
-};
-

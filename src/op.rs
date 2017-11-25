@@ -5,6 +5,8 @@ use ast::Expr;
 pub enum OpCode {
     Expr(Box<Expr>),
 
+    Assign,
+
     Neg,
     Not,
 
@@ -22,9 +24,9 @@ pub enum OpCode {
 /// Comparison operators
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CompOp {
-    /// `=`
+    /// `is`
     Equals,
-    /// `!=`
+    /// `isnt`
     Nequals,
     /// `<`
     Lt,

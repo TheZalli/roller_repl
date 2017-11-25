@@ -46,12 +46,16 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * `not`, `and`, `or`, `xor`
     * Only defined for booleans, for now
 * Comparison
-    * `is a = b`
-    * Allowed comparison operators are `=`, `<`, `>`, `<=`, `>=` and `!=` (inequality)
+    * Equality and inequality: `a is b`, `a isnt b`
+    * Allowed comparison operators are `is`, `isnt`, `<`, `>`, `<=` and `>=`
     * Returns boolean
 * Function call
     * `foo(1, 2)`, `{x y -> x + y*2}(1, 2)`
     * Also used for collection indexing
+* If-expression
+    * `if x is 2 then "hello" else "hi"`
+    * The conditional is any expression that evaluates to a boolean
+    * Else-part is required (for now)
 
 ## What is not yet implemented
 * So many things
@@ -61,9 +65,10 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Will use Clap
     * Currently always prints debug representations of the tokens and the AST unless those prints are commented
 * Control structures and a solution for sequential code execution (code blocks? semicolon operator? just use lists?)
+    * Loops
 * Builtin functions
     * `print`, `println`, `read` and `readln`
-        * Could input reading operations exploit the lexer?
+        * Could input reading operations exploit the lexer tokens?
     * String operations
     * Collection operations
 * Piecewise and assignment operations
@@ -82,14 +87,15 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Bigratios
     * Normal integers and bigints
     * Floats
+        * Meeting a NaN value should throw an error
     * Might need the type system for most idiomatic implementation
 * Maybe use reference counted or copy-on-write values, or maybe even garbage collecting
     * Current implementation is pretty inefficient and copies data a lot
 * References
     * Maybe even move from copy-semantics to reference-semantics
-* Symbol prefix operators/function values
-    * Prefixed with the backtick (`` `)
-* Identifier infix operators
+* Using symbol operators as prefixed function names
+    * Prefixed with the backtick character ( ` )
+* Functions as infix operators
     * Also prefixed with the backtick
 * Some unit tests...
 
@@ -101,7 +107,7 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Interpreter and REPL
 * Dynamic library loading
 * Module/library system
-    * Move builtins into prelude module
+    * Move as many builtins as possible into a prelude module
 * Physical unit system/library
-    * Bits and bytes, with SI and mebi- kibi- etc prefixes might be built-in
+    * Bits and bytes, with SI and mebi- kibi- etc prefixes that might be built-in
 * LLVM IR compiler frontend

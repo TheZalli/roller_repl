@@ -5,7 +5,7 @@ use std::collections::{BTreeSet, BTreeMap};
 use num::rational::Ratio;
 
 use error::{EvalError, Result};
-use ast::Expr;
+use ast::{Expr, LValue};
 
 // Type of the identifier strings.
 pub type IdType = String;
@@ -14,6 +14,8 @@ pub type IdType = String;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     None,
+    /// Value reference
+    LVal(LValue),
     Bool(bool),
     Num(Ratio<i32>),
     Str(String),
@@ -283,6 +285,16 @@ impl fmt::Display for Value {
 
         match self {
             &Value::None => write!(f, "none"),
+            &Value::LVal(ref lval) => {
+                if lval.is_global() {
+                    write!(f, "global.")?;
+                }
+                write!(f, "{}", lval.root)?;
+                for item in lval.trail.iter() {
+                    write!(f, ".{}", item)?;
+                }
+                Ok(())
+            },
             &Value::Num(x) => write!(f, "{}", x),
             &Value::Bool(x) => write!(f, "{}", x),
             &Value::Str(ref x) => write!(f, "{:?}", x), // {:?} is ok for now
