@@ -12,6 +12,10 @@ use op::{OpCode, CompOp};
 pub enum Expr {
     /// Value literal
     Val(Value),
+    /// LValue reference
+    LVal(LValue),
+    /// Assignment
+    Assign(LValue, Box<Expr>),
     /// Comparison
     Comp {
         op: CompOp,
@@ -39,8 +43,6 @@ pub struct LValue {
     pub root: IdType,
     /// Rest of the dot-separated list parts.
     pub trail: Vec<Expr>,
-    /// Whether we should declare the variable?
-    pub insert: bool,
 }
 
 impl LValue {
@@ -54,7 +56,6 @@ impl LValue {
             visibility: visibility.unwrap_or(LValVis::Local),
             root: root,
             trail: trail,
-            insert: visibility.is_some(),
         }
     }
 

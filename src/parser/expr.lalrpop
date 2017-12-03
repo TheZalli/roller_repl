@@ -18,13 +18,13 @@ extern {
         "->" => Token::RightArrow,
         "-" => Token::Minus,
         "not" => Token::Not,
-        "is" => Token::Is,
+        "is" => Token::Comp(CompOp::Equals),
         "isnt" => Token::Comp(CompOp::Nequals),
         "<"  => Token::Comp(CompOp::Lt),
         "<=" => Token::Comp(CompOp::Lte),
         ">"  => Token::Comp(CompOp::Gt),
         ">=" => Token::Comp(CompOp::Gte),
-        "=" => Token::Op(OpCode::Assign),
+        "=" => Token::Equals,
         "and" => Token::Op(OpCode::And),
         "or" => Token::Op(OpCode::Or),
         "xor" => Token::Op(OpCode::Xor),
@@ -114,9 +114,7 @@ expr: Expr = {
 
 expr0: Expr = {
     // right-associative
-    <lhs: expr1> "=" <rhs: expr0> => {
-        Expr::Op(FunCall::new(OpCode::Assign, vec![lhs, rhs], vec![]))
-    },
+    <lhs: lvalue> "=" <rhs: expr> => Expr::Assign(lhs, Box::new(rhs)),
     expr1 => <>,
 };
 
@@ -161,7 +159,7 @@ alt_item: (Expr, Expr) = {
 
 value: Expr = {
     term => Expr::Val(<>),
-    lvalue => Expr::Val(Value::LVal(<>)),
+    lvalue => Expr::LVal(<>),
     "[" <comma<expr>> "]" => Expr::List(<>),
     "{" <comma<expr>> "}" => Expr::Set(<>.into_iter().collect()),
     "{" ":" ","? "}" => Expr::Map(vec![].into_iter().collect()), // empty map

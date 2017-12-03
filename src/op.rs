@@ -5,8 +5,6 @@ use ast::Expr;
 pub enum OpCode {
     Expr(Box<Expr>),
 
-    Assign,
-
     Neg,
     Not,
 

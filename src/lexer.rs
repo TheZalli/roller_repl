@@ -22,7 +22,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 35] = [
     (r">", &|_| Token::Comp(CompOp::Gt)),
     (r">=", &|_| Token::Comp(CompOp::Gte)),
 
-    (r"=", &|_| Token::Op(OpCode::Assign)),
+    (r"=", &|_| Token::Equals),
 
     (r"\+", &|_| Token::Op(OpCode::Add)),
     (r"\*", &|_| Token::Op(OpCode::Mul)),
@@ -63,7 +63,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 35] = [
         "and" => Token::Op(OpCode::And),
         "or" => Token::Op(OpCode::Or),
         "xor" => Token::Op(OpCode::Xor),
-        "is" => Token::Is,
+        "is" => Token::Comp(CompOp::Equals),
         "isnt" => Token::Comp(CompOp::Nequals),
         "in" => Token::In,
         "if" => Token::If,
@@ -191,6 +191,8 @@ pub enum Token {
     Minus,
     /// Here because it can be a general keyword or a boolean unary operation
     Not,
+    // `=`
+    Equals,
     /// Comparison operators, like `<`
     Comp(CompOp),
     /// Infix operators, like `+`
@@ -211,7 +213,6 @@ pub enum Token {
     Alternate,
     /// `->`
     RightArrow,
-    Is,
     In,
     If,
     Then,

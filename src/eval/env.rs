@@ -135,7 +135,13 @@ impl Env {
                 fun_def.check_valid()?;
                 Ok(Value::Func(fun_def.clone()))
             },
-            &Expr::Val(ref x) => Ok(x.clone()),
+            &Expr::Val(ref val) => Ok(val.clone()),
+            &Expr::LVal(ref lval) => Ok(self.eval_lvalue(lval, false)?.clone()),
+            &Expr::Assign(ref lval, ref val) => {
+                let val = self.eval(&*val.clone())?;
+                *self.eval_lvalue(lval, true)? = val.clone();
+                Ok(val)
+            },
             &Expr::Op(ref fun_call) => self.eval_call(fun_call),
             &Expr::List(ref x) => Ok(Value::List(
                 x.iter().map(|x| self.eval(x)).collect::<Result<Vec<_>>>()?
@@ -253,7 +259,6 @@ impl Env {
 
         match &call.code {
             &OpCode::Expr(ref e) => self.eval_expr_call(e, vals, kw_vals),
-            &OpCode::Assign => unimplemented!(),
             &OpCode::Not =>
                 if vals.len() != 1 {
                     Err(EvalError::invalid_arg(&format!(
@@ -373,17 +378,16 @@ impl Env {
         }
     }
 
-    fn eval_lvalue(&mut self, lval: &LValue) -> Result<&mut Value> {
+    fn eval_lvalue(&mut self, lval: &LValue, insert: bool)
+        -> Result<&mut Value>
+    {
         use ast::LValVis::*;
-
-        // if we insert a singular variable
-        let insert_var = lval.trail.is_empty() && lval.insert;
 
         // get the root value
         let mut val: *mut Value =
             match lval.visibility {
-                Global => self.var_mut_global(&lval.root, insert_var)?,
-                Local => self.var_mut(&lval.root, insert_var)?,
+                Global => self.var_mut_global(&lval.root, insert)?,
+                Local => self.var_mut(&lval.root, insert)?,
             };
 
         if lval.trail.is_empty() {
@@ -393,7 +397,7 @@ impl Env {
 
         // check the trail of values
         let trail =
-            if lval.insert {
+            if insert {
                 // the last is where we will insert
                 &lval.trail[0..lval.trail.len()-1]
             } else {
@@ -407,7 +411,7 @@ impl Env {
             val = unsafe { (*val).index_mut(&index_val, false)? };
         }
 
-        if lval.insert {
+        if insert {
             // insert the value to the last position
             let index_val = self.eval(trail.last().unwrap())?;
             val = unsafe { (*val).index_mut(&index_val, true)? };
