@@ -122,9 +122,6 @@ impl Env {
             &Expr::List(ref x) => Ok(Value::List(
                 x.iter().map(|x| self.eval(x)).collect::<Result<Vec<_>>>()?
             )),
-            &Expr::Set(ref x) => Ok(Value::Set(
-                x.iter().map(|x| self.eval(x)).collect::<Result<BTreeSet<_>>>()?
-            )),
             &Expr::Map(ref x) => Ok(Value::Map(
                 x.iter().map(
                     |(k, v)| Ok((self.eval(k)?, self.eval(v)?))

@@ -18,7 +18,6 @@ pub enum Value {
     Num(Ratio<i32>),
     Str(String),
     List(Vec<Value>),
-    Set(BTreeSet<Value>),
     Map(BTreeMap<Value, Value>),
     Distribution(BTreeMap<Expr, u32>),
     Func(FunDef),
@@ -287,8 +286,7 @@ impl fmt::Display for Value {
             &Value::Bool(x) => write!(f, "{}", x),
             &Value::Str(ref x) => write!(f, "{:?}", x), // {:?} is ok for now
             &Value::Func(ref x) => write!(f, "{}", x),
-            &Value::List(ref x) => print_container!("[", x.iter(), ", ", "]"),
-            &Value::Set(ref x) => print_container!("{", x.iter(), ", ", "}"),
+            &Value::List(ref x) => print_container!("{", x.iter(), ", ", "}"),
             &Value::Map(ref x) =>
                 if x.is_empty() {
                     // otherwise empty set is the same as empty map
