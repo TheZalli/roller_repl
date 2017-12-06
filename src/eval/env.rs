@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, BTreeMap};
+use std::collections::BTreeMap;
 
 use error::{EvalError, Result};
 use ast::{Expr, FunCall, LValue, Control};

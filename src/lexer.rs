@@ -17,10 +17,10 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 35] = [
 
     (r"->", &|_| Token::RightArrow),
 
-    (r"<", &|_| Token::Comp(CompOp::Lt)),
     (r"<=", &|_| Token::Comp(CompOp::Lte)),
-    (r">", &|_| Token::Comp(CompOp::Gt)),
     (r">=", &|_| Token::Comp(CompOp::Gte)),
+    (r"<", &|_| Token::Comp(CompOp::Lt)),
+    (r">", &|_| Token::Comp(CompOp::Gt)),
 
     (r"=", &|_| Token::Equals),
 
