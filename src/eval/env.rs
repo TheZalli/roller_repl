@@ -39,6 +39,12 @@ impl RollerNamespace {
             EvalError::var_not_found(id)
         )
     }
+
+    /// Return an mutable reference to a variable or insert a default value.
+    pub fn var_mut_or_insert(&mut self, id: &str, default: Value) -> &mut Value
+    {
+        self.variables.entry(id.to_string()).or_insert(default)
+    }
 }
 
 /// The script's running environment.
@@ -57,49 +63,20 @@ impl Env {
         }
     }
 
-    /// Insert the variable `id` with `value`.
-    ///
-    /// Inserts to the current namespace, which might be the global namespace.
-    /// Returns the old value if any,
-    pub fn insert(&mut self, id: IdType, value: Value) -> Option<Value> {
-        self.ns_stack.last_mut().unwrap().insert(id, value)
+    fn get_local_ns(&self) -> &RollerNamespace {
+        self.ns_stack.last().unwrap()
     }
 
-    /// Get a refence to the variable with name `id`.
-    ///
-    /// Only checks the current namespace, which might be the global namespace.
-    fn var(&self, id: &str) -> Result<&Value> {
-        self.ns_stack.last().unwrap().var(id)
+    fn get_mut_local_ns(&mut self) -> &mut RollerNamespace {
+        self.ns_stack.last_mut().unwrap()
     }
 
-    /// Get a reference to the global variable with the name `id`.
-    fn var_global(&self, id: &str) -> Result<&Value> {
-        self.ns_stack[0].var(id)
+    fn get_global_ns(&self) -> &RollerNamespace {
+        &self.ns_stack[0]
     }
 
-    /// Get a mutable refence to a variable with name id.
-    ///
-    /// Only checks the current namespace, which might be the global namespace.
-    ///
-    /// If `insert` is true then the value is added with `none` value.
-    fn var_mut(&mut self, id: &str, insert: bool) -> Result<&mut Value> {
-        if insert {
-            self.ns_stack.last_mut().unwrap()
-                .insert(id.to_string(), Value::None);
-        }
-        self.ns_stack.last_mut().unwrap().var_mut(id)
-    }
-
-    /// Get a mutable refence to a variable with name id.
-    ///
-    /// Only checks the current namespace, which might be the global namespace.
-    ///
-    /// If `insert` is true then the value is added with `none` value.
-    fn var_mut_global(&mut self, id: &str, insert: bool) -> Result<&mut Value> {
-        if insert {
-            self.ns_stack[0].insert(id.to_string(), Value::None);
-        }
-        self.ns_stack[0].var_mut(id)
+    fn get_mut_global_ns(&mut self) -> &mut RollerNamespace {
+        &mut self.ns_stack[0]
     }
 
     /// Evaluate the expression and return a printable message.
@@ -119,7 +96,6 @@ impl Env {
                 // print differently according to what we did at AST root
                 match ast {
                     //&Expr::Assign(_, _) => format!(""),
-                    //&Expr::Id(ref id) => format!("`{}` is {}", id, val_str),
                     _ => format!("{}", val_str),
                 }
             },
@@ -384,11 +360,20 @@ impl Env {
         use ast::LValVis::*;
 
         // get the root value
-        let mut val: *mut Value =
-            match lval.visibility {
-                Global => self.var_mut_global(&lval.root, insert)?,
-                Local => self.var_mut(&lval.root, insert)?,
-            };
+        let mut val: *mut Value = {
+            // the namespace we want to change
+            let val_ns =
+                match lval.visibility {
+                    Global => self.get_mut_global_ns(),
+                    Local => self.get_mut_local_ns(),
+                };
+
+            if insert {
+                val_ns.var_mut_or_insert(&lval.root, Value::None)
+            } else {
+                val_ns.var_mut(&lval.root)?
+            }
+        };
 
         if lval.trail.is_empty() {
             // no reason to check the trail anymore, our job here is done
@@ -413,7 +398,7 @@ impl Env {
 
         if insert {
             // insert the value to the last position
-            let index_val = self.eval(trail.last().unwrap())?;
+            let index_val = self.eval(lval.trail.last().unwrap())?;
             val = unsafe { (*val).index_mut(&index_val, true)? };
         }
 

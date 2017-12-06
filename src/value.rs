@@ -5,7 +5,7 @@ use std::collections::{BTreeSet, BTreeMap};
 use num::rational::Ratio;
 
 use error::{EvalError, Result};
-use ast::{Expr, LValue};
+use ast::Expr;
 
 // Type of the identifier strings.
 pub type IdType = String;
