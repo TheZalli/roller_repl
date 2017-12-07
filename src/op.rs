@@ -1,10 +1,7 @@
-use ast::Expr;
-
 /// Operators
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OpCode {
-    Expr(Box<Expr>),
-
+    /// Unary negation
     Neg,
     Not,
 
@@ -17,11 +14,7 @@ pub enum OpCode {
     Mul,
     Div,
     Pow,
-}
 
-/// Comparison operators
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum CompOp {
     /// `is`
     Equals,
     /// `isnt`

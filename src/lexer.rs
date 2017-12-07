@@ -4,7 +4,7 @@ use regex::{Regex, RegexSet};
 use num::FromPrimitive;
 use num::rational::Ratio;
 
-use op::{OpCode, CompOp};
+use op::OpCode;
 
 /// Regex rules for matching tokens and the functions to create them
 const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 35] = [
@@ -17,12 +17,12 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 35] = [
 
     (r"->", &|_| Token::RightArrow),
 
-    (r"<=", &|_| Token::Comp(CompOp::Lte)),
-    (r">=", &|_| Token::Comp(CompOp::Gte)),
-    (r"<", &|_| Token::Comp(CompOp::Lt)),
-    (r">", &|_| Token::Comp(CompOp::Gt)),
-
     (r"=", &|_| Token::Equals),
+
+    (r"<=", &|_| Token::Op(OpCode::Lte)),
+    (r">=", &|_| Token::Op(OpCode::Gte)),
+    (r"<", &|_| Token::Op(OpCode::Lt)),
+    (r">", &|_| Token::Op(OpCode::Gt)),
 
     (r"\+", &|_| Token::Op(OpCode::Add)),
     (r"\*", &|_| Token::Op(OpCode::Mul)),
@@ -63,8 +63,8 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 35] = [
         "and" => Token::Op(OpCode::And),
         "or" => Token::Op(OpCode::Or),
         "xor" => Token::Op(OpCode::Xor),
-        "is" => Token::Comp(CompOp::Equals),
-        "isnt" => Token::Comp(CompOp::Nequals),
+        "is" => Token::Op(OpCode::Equals),
+        "isnt" => Token::Op(OpCode::Nequals),
         "in" => Token::In,
         "if" => Token::If,
         "then" => Token::Then,
@@ -193,8 +193,6 @@ pub enum Token {
     Not,
     // `=`
     Equals,
-    /// Comparison operators, like `<`
-    Comp(CompOp),
     /// Infix operators, like `+`
     Op(OpCode),
     /// Piecewise infix operators, prefixed by a dot, like `.+`

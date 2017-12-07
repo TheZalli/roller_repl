@@ -1,9 +1,10 @@
+#![allow(dead_code)] // TODO remove
 use std::collections::BTreeMap;
 
 use error::{EvalError, Result};
-use ast::{Expr, FunCall, LValue, Control};
+use ast::{Expr, CallExpr, LValue, Control};
 use value::{Value, IdType};
-use op::{OpCode, CompOp};
+use op::OpCode;
 
 /// A namespace for variables.
 #[derive(Debug)]
@@ -106,6 +107,9 @@ impl Env {
     /// Evaluate the expression and return the resulting value.
     pub fn eval(&mut self, expr: &Expr) -> Result<Value> {
         match expr {
+            &Expr::Empty => Err(EvalError::new_from_str_pair(
+                "EmptyExprEvaluated", "empty expression evaluated"
+            )),
             &Expr::Val(Value::Func(ref fun_def)) => {
                 // check if the definition is valid
                 fun_def.check_valid()?;
@@ -118,7 +122,40 @@ impl Env {
                 *self.eval_lvalue(lval, true)? = val.clone();
                 Ok(val)
             },
-            &Expr::Op(ref fun_call) => self.eval_call(fun_call),
+            &Expr::BinOp(op, ref lhs, ref rhs) => {
+                let lhs = self.eval(lhs)?;
+                // don't evaluate rhs if the op is unary
+                match op {
+                    OpCode::Neg => return lhs.neg(),
+                    OpCode::Not => return lhs.not(),
+                    _ => {}
+                }
+
+                let rhs = &self.eval(rhs)?;
+                match op {
+                    OpCode::Add => lhs.add(rhs),
+                    OpCode::Sub => lhs.sub(rhs),
+                    OpCode::Mul => lhs.mul(rhs),
+                    OpCode::Div => lhs.div(rhs),
+                    OpCode::Pow => lhs.pow(rhs),
+
+                    OpCode::And => lhs.and(rhs),
+                    OpCode::Or => lhs.or(rhs),
+                    OpCode::Xor => lhs.xor(rhs),
+
+                    // TODO: reimplement better ordering
+                    comp_op => Ok(Value::Bool(match comp_op {
+                        OpCode::Equals => lhs == *rhs,
+                        OpCode::Nequals => lhs != *rhs,
+                        OpCode::Lt => lhs < *rhs,
+                        OpCode::Lte => lhs <= *rhs,
+                        OpCode::Gt => lhs > *rhs,
+                        OpCode::Gte => lhs >= *rhs,
+                        _ => unreachable!()
+                    }))
+                }
+            },
+            &Expr::Call(ref call_expr) => self.eval_call(call_expr),
             &Expr::List(ref x) => Ok(Value::List(
                 x.iter().map(|x| self.eval(x)).collect::<Result<Vec<_>>>()?
             )),
@@ -162,18 +199,6 @@ impl Env {
                 // return value
                 Ok(Value::Distribution(out_map))
             },
-            &Expr::Comp { op, ref lhs, ref rhs } => {
-                let lhs = self.eval(lhs)?;
-                let rhs = self.eval(rhs)?;
-                Ok(Value::Bool(match op {
-                    CompOp::Equals => lhs == rhs,
-                    CompOp::Nequals => lhs != rhs,
-                    CompOp::Lt => lhs < rhs,
-                    CompOp::Lte => lhs <= rhs,
-                    CompOp::Gt => lhs > rhs,
-                    CompOp::Gte => lhs >= rhs,
-                }))
-            },
             &Expr::Ctrl(
                 Control::If { ref cond, ref then_expr, ref else_expr }
             ) => {
@@ -190,7 +215,7 @@ impl Env {
     }
 
     /// Evaluate a function call.
-    fn eval_call(&mut self, call: &FunCall) -> Result<Value> {
+    fn eval_call(&mut self, call: &CallExpr) -> Result<Value> {
         // evaluate arguments first
         let mut vals = Vec::with_capacity(call.args.len());
         for expr in call.args.iter() {
@@ -203,71 +228,7 @@ impl Env {
             kw_vals.insert(kw, self.eval(expr)?);
         }
 
-        // binary ops
-        fn acc_op(code: &OpCode,
-                  operands: Vec<Value>,
-                  func: fn(&Value, &Value) -> Result<Value>)
-            -> Result<Value>
-        {
-            if operands.len() < 2 {
-                Err(EvalError::invalid_arg(&format!(
-                    "operator `{:?}` requires at least 2 operands", code
-                )))
-            } else {
-                use std::collections::VecDeque;
-                let mut arg_values: VecDeque<Value> = operands.into();
-
-                // calculate result
-                let mut acc =
-                    func(&arg_values.pop_front().unwrap(),
-                        &arg_values.pop_front().unwrap())?;
-
-                for val in arg_values {
-                    acc = func(&acc, &val)?;
-                }
-
-                return Ok(acc);
-            }
-        }
-
-        match &call.code {
-            &OpCode::Expr(ref e) => self.eval_expr_call(e, vals, kw_vals),
-            &OpCode::Not =>
-                if vals.len() != 1 {
-                    Err(EvalError::invalid_arg(&format!(
-                        "not-operation requires exactly 1 operand"
-                    )))
-                } else {
-                    vals[0].not()
-                },
-            &OpCode::And => acc_op(&call.code, vals, Value::and),
-            &OpCode::Or  => acc_op(&call.code, vals, Value::or),
-            &OpCode::Xor => acc_op(&call.code, vals, Value::xor),
-            &OpCode::Neg =>
-                if vals.len() != 1 {
-                    Err(EvalError::invalid_arg(&format!(
-                        "negation requires exactly 1 operand"
-                    )))
-                } else {
-                    vals[0].neg()
-                },
-            &OpCode::Add => acc_op(&call.code, vals, Value::add),
-            &OpCode::Sub => acc_op(&call.code, vals, Value::sub),
-            &OpCode::Mul => acc_op(&call.code, vals, Value::mul),
-            &OpCode::Div => acc_op(&call.code, vals, Value::div),
-            &OpCode::Pow => acc_op(&call.code, vals, Value::pow),
-        }
-    }
-
-    fn eval_expr_call(&mut self,
-                    expr: &Expr,
-                    vals: Vec<Value>,
-                    kw_vals: BTreeMap<&String, Value>) -> Result<Value>
-    {
-        // move to mutable
-        let mut kw_vals = kw_vals;
-
-        match self.eval(expr)? {
+        match self.eval(&*call.func)? {
             // evaluate a function call
             Value::Func(fun_def) => {
                 // the function's local namespace

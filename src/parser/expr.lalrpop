@@ -2,7 +2,7 @@ use num::rational::Ratio;
 
 use ast::*;
 use value::{Value, FunDef};
-use op::{OpCode, CompOp};
+use op::OpCode;
 use lexer::Token;
 
 grammar;
@@ -16,15 +16,15 @@ extern {
         "{" => Token::LBrace,
         "}" => Token::RBrace,
         "->" => Token::RightArrow,
+        "=" => Token::Equals,
         "-" => Token::Minus,
         "not" => Token::Not,
-        "is" => Token::Comp(CompOp::Equals),
-        "isnt" => Token::Comp(CompOp::Nequals),
-        "<"  => Token::Comp(CompOp::Lt),
-        "<=" => Token::Comp(CompOp::Lte),
-        ">"  => Token::Comp(CompOp::Gt),
-        ">=" => Token::Comp(CompOp::Gte),
-        "=" => Token::Equals,
+        "is" => Token::Op(OpCode::Equals),
+        "isnt" => Token::Op(OpCode::Nequals),
+        "<"  => Token::Op(OpCode::Lt),
+        "<=" => Token::Op(OpCode::Lte),
+        ">"  => Token::Op(OpCode::Gt),
+        ">=" => Token::Op(OpCode::Gte),
         "and" => Token::Op(OpCode::And),
         "or" => Token::Op(OpCode::Or),
         "xor" => Token::Op(OpCode::Xor),
@@ -85,19 +85,14 @@ comma_plus<T>: Vec<T> = sep_list_plus<T, ",">;
 
 // expression tier, used for operator precedence
 tier<Op, NextTier>: Expr = {
-    <lhs: tier<Op, NextTier>> <op: Op> <rhs: NextTier> => Expr::Op(
-        FunCall::new(op, vec![lhs, rhs], vec![])
-    ),
+    <lhs: tier<Op, NextTier>> <op: Op> <rhs: NextTier> =>
+        Expr::BinOp(op, Box::new(lhs), Box::new(rhs)),
     NextTier
 };
 
 comp_expr: Expr =
-    <lhs: expr1> <op: comp_operator> <rhs: expr1> =>
-        Expr::Comp {
-            op: op,
-            lhs: Box::new(lhs),
-            rhs: Box::new(rhs),
-        };
+    <lhs: expr1> <op: operator_comp> <rhs: expr1> =>
+        Expr::BinOp(op, Box::new(lhs), Box::new(rhs));
 
 // without END lalrpop ignores rest of the input if we found a rule match
 pub line: Expr = {
@@ -106,7 +101,6 @@ pub line: Expr = {
 
 expr: Expr = {
     expr0 => <>,
-    <cmp: comp_expr> => cmp,
     // if structure
     "if" <cond: expr> "then" <then_part: expr> "else" <else_part: expr> =>
         Expr::Ctrl(Control::new_if(cond, then_part, else_part)),
@@ -115,6 +109,7 @@ expr: Expr = {
 expr0: Expr = {
     // right-associative
     <lhs: lvalue> "=" <rhs: expr> => Expr::Assign(lhs, Box::new(rhs)),
+    <cmp: comp_expr> => cmp,
     expr1 => <>,
 };
 
@@ -125,25 +120,22 @@ expr3: Expr = tier<operator_3, expr4>;
 
 expr4: Expr = {
     // right-associative
-    <lhs: expr5> "^" <rhs: expr4> => {
-        Expr::Op(FunCall::new(OpCode::Pow, vec![lhs, rhs], vec![]))
-    },
+    <lhs: expr5> "^" <rhs: expr4> =>
+        Expr::BinOp(OpCode::Pow, Box::new(lhs), Box::new(rhs)),
     expr5 => <>,
 };
 
 expr5: Expr = {
-    "-" <e: expr6> => Expr::Op(
-        FunCall::new(OpCode::Neg, vec![e], vec![])
-    ),
-    "not" <e: expr6> => Expr::Op(
-        FunCall::new(OpCode::Not, vec![e], vec![])
-    ),
+    "-" <e: expr6> =>
+        Expr::BinOp(OpCode::Neg, Box::new(e), Box::new(Expr::Empty)),
+    "not" <e: expr6> =>
+        Expr::BinOp(OpCode::Not, Box::new(e), Box::new(Expr::Empty)),
     expr6 => <>,
 };
 
 expr6: Expr = {
-    <e: expr6> "(" <args: comma<expr>> ")" => Expr::Op(
-        FunCall::new(OpCode::Expr(Box::new(e)), args, vec![])
+    <e: expr6> "(" <args: comma<expr>> ")" => Expr::Call(
+        CallExpr::new(e, args, vec![])
     ),
     value => <>,
 };
@@ -200,13 +192,13 @@ term: Value = {
     string => Value::new_string(&<>),
 };
 
-comp_operator: CompOp = {
-    "is" => CompOp::Equals,
-    "isnt" => CompOp::Nequals,
-    "<" => CompOp::Lt,
-    "<=" => CompOp::Lte,
-    ">" => CompOp::Gt,
-    ">=" => CompOp::Gte,
+operator_comp: OpCode = {
+    "is" => OpCode::Equals,
+    "isnt" => OpCode::Nequals,
+    "<" => OpCode::Lt,
+    "<=" => OpCode::Lte,
+    ">" => OpCode::Gt,
+    ">=" => OpCode::Gte,
 };
 
 operator_1: OpCode = {

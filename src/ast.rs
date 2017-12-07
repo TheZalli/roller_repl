@@ -5,26 +5,23 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use value::{Value, IdType};
-use op::{OpCode, CompOp};
+use op::OpCode;
 
 /// A Roller expression.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Expr {
+    // A simple dummy expression that is illegal to be evaluated
+    Empty,
     /// Value literal
     Val(Value),
     /// LValue reference
     LVal(LValue),
     /// Assignment
     Assign(LValue, Box<Expr>),
-    /// Comparison
-    Comp {
-        op: CompOp,
-        lhs: Box<Expr>,
-        rhs: Box<Expr>
-    },
-    /// Function call.
-    /// Also applies operators since they are built-in functions.
-    Op(FunCall),
+    /// Binary and unary operations
+    BinOp(OpCode, Box<Expr>, Box<Expr>),
+    /// Function call
+    Call(CallExpr),
     /// List of expressions, will evaluate to `Value::List`.
     List(Vec<Expr>),
     Set(BTreeSet<Expr>),
@@ -106,24 +103,24 @@ pub enum Control {
 ///
 /// Not to be confused with `PrankCall`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FunCall {
-    /// Name of the function or the operator.
-    pub code: OpCode,
+pub struct CallExpr {
+    /// The callable function.
+    pub func: Box<Expr>,
     /// The vector of the ordered arguments.
     pub args: Vec<Expr>,
     /// The vector of named arguments.
     pub kw_args: Vec<(IdType, Expr)>,
 }
 
-impl FunCall {
+impl CallExpr {
     /// Create a new function call with the given ordered, and named, arguments.
-    pub fn new(code: OpCode,
+    pub fn new(func: Expr,
                args: Vec<Expr>,
                kw_args: Vec<(IdType, Expr)>)
                -> Self
     {
-        FunCall {
-            code: code,
+        CallExpr {
+            func: Box::new(func),
             args: args,
             kw_args: kw_args,
         }

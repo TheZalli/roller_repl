@@ -43,9 +43,6 @@ impl EvalError {
     impl_err_kind_builder!(var_not_found, ValueNotFound,
         |id| format!("variable `{}` not found in this context", id)
     );
-    impl_err_kind_builder!(val_not_found, ValueNotFound,
-        |id| format!("value `{}` not found in this context", id)
-    );
     impl_err_kind_builder!(unexpected_type, UnexpectedType);
     impl_err_kind_builder!(unimplemented, Unimplemented);
 }
