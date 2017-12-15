@@ -16,6 +16,7 @@ extern {
         "{" => Token::LBrace,
         "}" => Token::RBrace,
         "->" => Token::RightArrow,
+        "<-" => Token::LeftArrow,
         "=" => Token::Equals,
         "-" => Token::Minus,
         "not" => Token::Not,
@@ -94,6 +95,10 @@ comp_expr: Expr =
     <lhs: expr1> <op: operator_comp> <rhs: expr1> =>
         Expr::BinOp(op, Box::new(lhs), Box::new(rhs));
 
+map_pair: (Expr, Expr) = {
+    <a: expr> ":" <b: expr> => (a, b),
+};
+
 // without END lalrpop ignores rest of the input if we found a rule match
 pub line: Expr = {
     <expr> END => <>,
@@ -104,12 +109,22 @@ expr: Expr = {
     // if structure
     "if" <cond: expr> "then" <then_part: expr> "else" <else_part: expr> =>
         Expr::Ctrl(Control::new_if(cond, then_part, else_part)),
+    // function definition
+    <args: identifier*> "->" <body: expr> =>
+        Expr::Val(Value::Func(FunDef {
+            arg_names: args,
+            body: Box::new(body),
+        })),
 };
 
 expr0: Expr = {
     // right-associative
     <lhs: lvalue> "=" <rhs: expr> => Expr::Assign(lhs, Box::new(rhs)),
     <cmp: comp_expr> => cmp,
+    // function call
+    <e: expr1> "<-" <args: expr1*> => Expr::Call(
+        CallExpr::new(e, args, vec![])
+    ),
     expr1 => <>,
 };
 
@@ -126,7 +141,7 @@ expr4: Expr = {
 };
 
 expr5: Expr = {
-    "-" <e: expr6> =>
+    "(" "-" <e: expr6> ")" =>
         Expr::BinOp(OpCode::Neg, Box::new(e), Box::new(Expr::Empty)),
     "not" <e: expr6> =>
         Expr::BinOp(OpCode::Not, Box::new(e), Box::new(Expr::Empty)),
@@ -134,14 +149,7 @@ expr5: Expr = {
 };
 
 expr6: Expr = {
-    <e: expr6> "(" <args: comma<expr>> ")" => Expr::Call(
-        CallExpr::new(e, args, vec![])
-    ),
     value => <>,
-};
-
-map_pair: (Expr, Expr) = {
-    <a: expr> ":" <b: expr> => (a, b),
 };
 
 alt_item: (Expr, Expr) = {
@@ -155,17 +163,12 @@ value: Expr = {
     "{" <comma<expr>> "}" => Expr::List(<>),
     "{" ":" ","? "}" => Expr::Map(vec![].into_iter().collect()), // empty map
     "{" <comma_plus<map_pair>> "}" => Expr::Map(<>.into_iter().collect()),
-    "{" "|" ","? "}" => Expr::Distribution(vec![].into_iter().collect()),
+    "{" "|" "}" => Expr::Distribution(vec![].into_iter().collect()),
     "{" <a: alt_item> "|" <list: sep_list<alt_item, "|">> "}" => {
         let mut v = list;
         v.push(a);
         Expr::Distribution(v.into_iter().collect())
     },
-    "{" <args: identifier*> "->" <body: expr> "}" =>
-        Expr::Val(Value::Func(FunDef {
-            arg_names: args,
-            body: Box::new(body),
-        })),
     "(" <expr> ")" => <>,
 };
 
