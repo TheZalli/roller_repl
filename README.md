@@ -23,17 +23,15 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
         * No string operations yet
         * String escaping works, but even escaped backslashes are not allowed before the ending quotation mark
             * (like in Python)
-    * List (`[1, 2, 3]`)
+    * List (`{1, 2, 3}`)
         * Implemented as a Rust vector
-    * Set (`{1, 2, 3}`)
-        * Implemented as a Rust binary tree set
     * Map (`{1:"a", 2:"b", 3:"c"}`)
         * Implemented as a Rust binary tree map
     * Distribution (`{1 | 2 | 3}` or `{true:2 | false:1}`)
         * A weighted discrete distribution, implemented as a binary tree map, like the previous map datatype
         * Each element allows an optional weight value, that has to be an integer
         * Duplicate key values are merged and the result's weight value will be their sum
-    * Functions (`{a b -> a + b}`)
+    * Functions (`a b -> a + b`)
         * Functions are first-class citizens, which is a trendy way of saying that they are just another datatype in this language
 * Variables
     * Variable identifiers are unicode strings
@@ -41,21 +39,23 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Matched with `[\pL_][\pL\pN_]*` regex
 * Arithmetic operations
     * Addition (`+`), substraction, negation (`-`), multiplication (`*`), division (`/`), exponentiation (`^`)
+        * Negation requires to be enclosed by parentheses like `(-a)`, like in Haskell.
     * Only defined between numerals
 * Boolean operations
     * `not`, `and`, `or`, `xor`
     * Only defined for booleans, for now
 * Comparison
-    * Equality and inequality: `a is b`, `a isnt b`
     * Allowed comparison operators are `is`, `isnt`, `<`, `>`, `<=` and `>=`
+        * Equality and inequality are `a is b` and `a isnt b`
     * Returns boolean
 * Function call
-    * `foo(1, 2)`, `{x y -> x + y*2}(1, 2)`
+    * `foo <- 1 2`, `(x y -> x + y*2) <- 1 2`
     * Also used for collection indexing
 * If-expression
     * `if x is 2 then "hello" else "hi"`
     * The conditional is any expression that evaluates to a boolean
     * Else-part is required (for now)
+        * This is so that recursive if expressions are possible
 
 ## What is not yet implemented
 * So many things
@@ -64,8 +64,8 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
 * Command-line arguments and REPL-variables
     * Will use Clap
     * Currently always prints debug representations of the tokens and the AST unless those prints are commented
-* Control structures and a solution for sequential code execution (code blocks? semicolon operator? just use lists?)
-    * Loops
+* Solution for sequential code execution (code blocks? semicolon operator? just use lists?)
+* Loops
 * Builtin functions
     * `print`, `println`, `read` and `readln`
         * Could input reading operations exploit the lexer tokens?
@@ -110,4 +110,5 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Move as many builtins as possible into a prelude module
 * Physical unit system/library
     * Bits and bytes, with SI and mebi- kibi- etc prefixes that might be built-in
-* LLVM IR compiler frontend
+* LLVM IR compiler frontend?
+    * Might be an interesting project

@@ -254,11 +254,10 @@ impl Value {
 
 impl fmt::Display for FunDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,"{{ ")?;
         for arg in &self.arg_names {
             write!(f, "{} ", arg)?;
         }
-        write!(f, "-> {} }}", self.body)
+        write!(f, "-> {}", self.body)
     }
 }
 
