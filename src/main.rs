@@ -121,7 +121,7 @@ fn real_main() -> i32 {
                         let mut tokens = Vec::new();
                         ::std::mem::swap(&mut tokens, &mut temp_tokens);
 
-                        println!("\x1B[1;30mLexed: {:?}\x1B[0m\n", tokens);
+                        println!("Lexed: {:?}\n", tokens);
 
                         // empty token streams are not valid
                         if tokens.len() <= 1 {
@@ -132,7 +132,7 @@ fn real_main() -> i32 {
                         // strip the location data
                         let tokens = tokens.into_iter().map(|(_, x)| x);
                         let parse_res = expr::parse_line(tokens);
-                        println!("\x1B[1;30mParsed: {:?}\x1B[0m\n", parse_res);
+                        println!("Parsed: {:?}\n", parse_res);
 
                         if let Ok(exp) = parse_res {
                             println!("{}", env.eval_print(&exp));
