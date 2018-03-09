@@ -18,11 +18,11 @@ mod lexer;
 mod parser;
 mod eval;
 
-use std::io;
-use std::io::BufRead;
+use std::io::{Read, BufRead, BufReader, Lines, stdin};
+use std::fs::File;
 
 use rustyline::error::ReadlineError;
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, App};
 
 use lexer::{Lexer, LexerState};
 use parser::expr;
@@ -36,9 +36,22 @@ fn main() {
                 .short("d")
                 .long("debug")
                 .help("Enables debug prints"))
+            .arg(Arg::with_name("input file")
+                .short("i")
+                .long("input")
+                .value_name("FILE PATHS")
+                .help("Evaluates the input files in the given order instead of reading from stdin"))
+            .arg(Arg::with_name("output file")
+                .short("o")
+                .long("output")
+                .value_name("FILE PATH")
+                .max_values(1)
+                .help("Prints the output of evaluation into the given file"))
             .get_matches();
 
     let debug_mode = clap_matches.is_present("debug");
+    let use_input_file = clap_matches.is_present("input file");
+    let use_output_file = clap_matches.is_present("output file");
 
     let in_isatty;
     #[cfg(unix)] {
@@ -62,10 +75,40 @@ fn main() {
     // rustyline input & output
     let mut rl = rustyline::Editor::<()>::new();
 
-    // pipe input, since reading rustyline changes stdout
-    let mut pipe_reader = io::BufReader::new(io::stdin()).lines();
+    // opens the given file or on error exits the process with the status code 1
+    macro_rules! open_file_or_exit {
+        ($filepath: expr, $files_purpose: expr) => {
+            match File::open($filepath) {
+                Ok(file) => file,
+                Err(e) => {
+                    println!("Error opening {} file: {}", $files_purpose, e);
+                    ::std::process::exit(1)
+                  }
+            }
+        };
+    }
 
-    if in_isatty && out_isatty {
+    // handles pipe or file input, since reading with rustyline outputs to stdout and dirties it
+    let mut pipe_reader: Lines<BufReader<Box<Read>>> =
+        BufReader::new(
+            if use_input_file {
+                let mut path_iter = clap_matches.values_of("input file").unwrap();
+
+                let file = open_file_or_exit!(path_iter.next().unwrap(), "input");
+                let mut file = Box::new(file) as Box<Read>;
+
+                // chain all the other input files after the first
+                for filepath in path_iter {
+                    file = Box::new(file.chain(open_file_or_exit!(filepath, "input")))
+                }
+
+                file
+            } else {
+                Box::new(stdin()) as Box<Read>
+            }
+        ).lines();
+
+    if in_isatty && out_isatty && !use_input_file {
         println!("Interactive Roller REPL started");
         if debug_mode {
             println!("(Debug prints are active)");
@@ -75,7 +118,7 @@ fn main() {
     // the lexer
     let lexer = Lexer::default();
 
-    // the evaluation environment holding the runtime data
+    // the evaluation environment holding the runtime data like variables
     let mut env = Env::new();
 
     // a helper token holder
@@ -83,12 +126,12 @@ fn main() {
     // the continuation flag
     let mut continuing = false;
     // the lexer state, for storing data between continuations
-    let mut state = LexerState::repl_default();
+    let mut lexer_state = LexerState::repl_default();
 
     // return value
     let return_status = loop {
         // read a line
-        let line_res = if out_isatty {
+        let line_res = if out_isatty && !use_input_file {
             rl.readline(
                 if continuing { prompt_continue } else { prompt }
             )
@@ -114,12 +157,12 @@ fn main() {
                 // by-default do not continue
                 continuing = false;
 
-                match lexer.parse(&input, state) {
+                match lexer.parse(&input, lexer_state) {
                     // continue to the next iteration
                     Ok((lexed, Some(new_state))) => {
                         temp_tokens.extend(lexed);
                         continuing = true;
-                        state = new_state;
+                        lexer_state = new_state;
                     },
                     Ok((lexed, None)) => {
                         temp_tokens.extend(lexed);
@@ -165,7 +208,7 @@ fn main() {
 
             Err(ReadlineError::Eof) => {
                 // received EOF (ctrl+D, or end of pipe input)
-                if in_isatty {
+                if in_isatty && !use_input_file {
                     eprintln!("End-of-file received");
                 }
                 break 0;
@@ -182,11 +225,11 @@ fn main() {
 
         // reset the state if not continuing
         if !continuing {
-            state = LexerState::repl_default();
+            lexer_state = LexerState::repl_default();
         }
     };
 
-    if in_isatty {
+    if in_isatty && !use_input_file {
         println!("Exiting");
     }
 
