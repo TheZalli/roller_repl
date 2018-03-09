@@ -1,16 +1,13 @@
 ///! Roller REPL implementation.
 ///!
-///! Works as a reference implementation.
 ///! To see what is and what is not implemented, check the readme.
 
-#[cfg(unix)]
-extern crate libc;
-#[macro_use]
-extern crate lazy_static;
-
+#[cfg(unix)] extern crate libc;
+#[macro_use] extern crate lazy_static;
 extern crate rustyline;
 extern crate num;
 extern crate regex;
+#[macro_use] extern crate clap;
 
 // TODO: rework the module files when the new module RFC lands
 mod error;
@@ -25,17 +22,24 @@ use std::io;
 use std::io::BufRead;
 
 use rustyline::error::ReadlineError;
+use clap::{Arg, App, SubCommand};
 
 use lexer::{Lexer, LexerState};
 use parser::expr;
 use eval::Env;
 
 fn main() {
-    // this is a command-line application so we want to return the status number
-    ::std::process::exit(real_main());
-}
+    let clap_matches =
+        App::new(crate_name!())
+            .about("Roller script REPL")
+            .arg(Arg::with_name("debug")
+                .short("d")
+                .long("debug")
+                .help("Enables debug prints"))
+            .get_matches();
 
-fn real_main() -> i32 {
+    let debug_mode = clap_matches.is_present("debug");
+
     let in_isatty;
     #[cfg(unix)] {
         in_isatty = unsafe { libc::isatty(libc::STDOUT_FILENO as i32) } != 0;
@@ -63,6 +67,9 @@ fn real_main() -> i32 {
 
     if in_isatty && out_isatty {
         println!("Interactive Roller REPL started");
+        if debug_mode {
+            println!("(Debug prints are active)");
+        }
     }
 
     // the lexer
@@ -121,7 +128,9 @@ fn real_main() -> i32 {
                         let mut tokens = Vec::new();
                         ::std::mem::swap(&mut tokens, &mut temp_tokens);
 
-                        println!("Lexed: {:?}\n", tokens);
+                        if debug_mode {
+                            println!("Lexed: {:?}\n", tokens);
+                        }
 
                         // empty token streams are not valid
                         if tokens.len() <= 1 {
@@ -132,7 +141,10 @@ fn real_main() -> i32 {
                         // strip the location data
                         let tokens = tokens.into_iter().map(|(_, x)| x);
                         let parse_res = expr::parse_line(tokens);
-                        println!("Parsed: {:?}\n", parse_res);
+
+                        if debug_mode {
+                            println!("Parsed: {:?}\n", parse_res);
+                        }
 
                         if let Ok(exp) = parse_res {
                             println!("{}", env.eval_print(&exp));
@@ -172,11 +184,12 @@ fn real_main() -> i32 {
         if !continuing {
             state = LexerState::repl_default();
         }
-    }; // end of the infinite loop
+    };
 
     if in_isatty {
         println!("Exiting");
     }
 
-    return_status
+    // this is a command-line application so we want to return the status number
+    ::std::process::exit(return_status);
 }

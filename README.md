@@ -57,14 +57,13 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
     * Else-part is required (for now)
         * This makes recursive if expressions are possible
         * Maybe an if-statement that doesn't have else-part and doesn't return a value is added sometime?
+* Enabling debug prints via the `--debug`/`-d` flag
 
 ## What is not yet implemented
 * So many things
 * File input
 * Error catching and throwing
-* Command-line arguments and REPL-variables
-    * Will use Clap
-    * Currently always prints debug representations of the tokens and the AST unless those prints are commented
+* More command-line arguments and REPL-specific flags and variables
 * Solution for sequential code execution (code blocks? semicolon operator? just use lists of expressions?)
 * Loops
 * Builtin functions

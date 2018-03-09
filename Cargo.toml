@@ -10,6 +10,7 @@ regex = "^0.2"
 lalrpop-util = "0.14.0"
 num = "^0.1"
 lazy_static = "^1.0"
+clap = "^2.31"
 
 [target.'cfg(unix)'.dependencies]
 libc = "^0.2"
