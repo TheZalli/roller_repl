@@ -24,10 +24,13 @@ pub enum Expr {
     Call(CallExpr),
     /// List of expressions, will evaluate to `Value::List`.
     List(Vec<Expr>),
+    /// Set of expressions, will evaluate to `Value::Set`.
     Set(BTreeSet<Expr>),
+    /// Map of expressions, will evaluate to `Value::Map`.
     Map(BTreeMap<Expr, Expr>),
     /// Control structures.
     Ctrl(Control),
+    /// Distribution expression, will evaluate to `Value::Distribution`.
     Distribution(Vec<(Expr, Expr)>),
 }
 
@@ -35,7 +38,7 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LValue {
     /// Where is this variable visible in.
-    pub visibility: LValVis,
+    pub visibility: Option<LValVis>,
     /// The first variable part.
     pub root: IdType,
     /// Rest of the dot-separated list parts.
@@ -45,20 +48,26 @@ pub struct LValue {
 impl LValue {
     /// Creates a new `LValue`.
     ///
-    /// If visibility is `None` the default of `LValVis::Local` is used.
-    /// If visibility is not `None` however, the value will be inserted into
-    /// the namespace as new (declared).
+    /// If visibility is `None` the default visibility, local, is used.
     pub fn new(visibility: Option<LValVis>, root: IdType, trail: Vec<Expr>) -> Self {
-        LValue {
-            visibility: visibility.unwrap_or(LValVis::Local),
-            root: root,
-            trail: trail,
-        }
+        LValue { visibility, root, trail }
     }
 
-    /// Returns true if this LValue refers to a global value.
+    /// Returns true if this `LValue` refers to a global value.
     pub fn is_global(&self) -> bool {
-        self.visibility == LValVis::Global
+        self.visibility == Some(LValVis::Global)
+    }
+
+    /// Returns true if `LValue` refers to a local value.
+    ///
+    /// Default visibility is local.
+    pub fn is_local(&self) -> bool {
+        !self.is_global()
+    }
+
+    /// Returns true if this `LValue` has the default visibility (local).
+    pub fn is_default_visibility(&self) -> bool {
+        self.visibility.is_none()
     }
 }
 
@@ -100,8 +109,6 @@ pub enum Control {
 }
 
 /// A function application with ordered and/or named arguments.
-///
-/// Not to be confused with `PrankCall`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CallExpr {
     /// The callable function.
@@ -149,8 +156,10 @@ impl fmt::Display for Expr {
 
 impl fmt::Display for LValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let LValVis::Global = self.visibility {
-            write!(f, "global.")?;
+        match self.visibility {
+            Some(LValVis::Global) => write!(f, "global.")?,
+            Some(LValVis::Local) => write!(f, "local.")?,
+            None => {},
         }
         write!(f, "{}", self.root)?;
         for part in self.trail.iter() {

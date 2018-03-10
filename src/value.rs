@@ -13,6 +13,8 @@ pub type IdType = String;
 /// A Roller value.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
+    /// Value that will never be printed, emptier than `None`
+    Void,
     None,
     Bool(bool),
     Num(Ratio<i32>),
@@ -280,10 +282,11 @@ impl fmt::Display for Value {
         }
 
         match self {
+            &Value::Void => write!(f, ""),
             &Value::None => write!(f, "none"),
             &Value::Num(x) => write!(f, "{}", x),
             &Value::Bool(x) => write!(f, "{}", x),
-            &Value::Str(ref x) => write!(f, "{:?}", x), // {:?} is ok for now
+            &Value::Str(ref x) => write!(f, "{}", x),
             &Value::Func(ref x) => write!(f, "{}", x),
             &Value::List(ref x) => print_container!("{", x.iter(), ", ", "}"),
             &Value::Map(ref x) =>

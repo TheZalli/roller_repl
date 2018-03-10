@@ -18,7 +18,7 @@ mod lexer;
 mod parser;
 mod eval;
 
-use std::io::{Read, BufRead, BufReader, Lines, stdin};
+use std::io::{Read, BufRead, BufReader, Lines, stdin, stdout, stderr};
 use std::fs::File;
 
 use rustyline::error::ReadlineError;
@@ -119,7 +119,7 @@ fn main() {
     let lexer = Lexer::default();
 
     // the evaluation environment holding the runtime data like variables
-    let mut env = Env::new();
+    let mut env = Env::new(Box::new(stdout()), Box::new(stderr()));
 
     // a helper token holder
     let mut temp_tokens = Vec::new();

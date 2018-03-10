@@ -66,9 +66,9 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
 * More command-line arguments and REPL-specific flags and variables
 * Solution for sequential code execution (code blocks? semicolon operator? just use lists of expressions?)
 * Loops
-* Builtin functions
-    * `print`, `println`, `read` and `readln`
-        * Could input reading operations exploit the lexer tokens?
+* More builtin functions
+    * `read` and `readln`
+        * Could input reading operations exploit tokens from the lexer?
     * String operations
     * Collection operations
 * Piecewise and assignment operations

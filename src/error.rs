@@ -1,5 +1,7 @@
 use std::fmt;
+use std::io;
 use std::str::FromStr;
+use std::error::Error;
 
 pub type Result<T> = ::std::result::Result<T, EvalError>;
 
@@ -55,6 +57,8 @@ pub enum EvalErrorKind {
     ValueNotFound,
     UnexpectedType,
     Unimplemented,
+    IOError,
+    Unknown,
     /// Remember to check that the name is not the same as one of above
     Custom(String),
 }
@@ -70,6 +74,8 @@ impl FromStr for EvalErrorKind {
             "ValueNotFound" => ValueNotFound,
             "UnexpectedType" => UnexpectedType,
             "Unimplemented" => Unimplemented,
+            "IOError" => IOError,
+            "Unknown" => Unknown,
             _ => Custom(s.to_string())
         })
     }
@@ -88,5 +94,11 @@ impl fmt::Display for EvalErrorKind {
 impl fmt::Display for EvalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}, {}", self.kind, self.message)
+    }
+}
+
+impl From<io::Error> for EvalError {
+    fn from(err: io::Error) -> Self {
+        EvalError { kind: EvalErrorKind::IOError, message: err.description().to_string()}
     }
 }

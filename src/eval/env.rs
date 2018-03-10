@@ -1,5 +1,6 @@
 #![allow(dead_code)] // TODO remove
 use std::collections::BTreeMap;
+use std::io::Write;
 
 use error::{EvalError, Result};
 use ast::{Expr, CallExpr, LValue, Control};
@@ -7,7 +8,7 @@ use value::{Value, IdType};
 use op::OpCode;
 
 /// A namespace for variables.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct RollerNamespace {
     variables: BTreeMap<IdType, Value>,
 }
@@ -42,26 +43,43 @@ impl RollerNamespace {
     }
 
     /// Return an mutable reference to a variable or insert a default value.
-    pub fn var_mut_or_insert(&mut self, id: &str, default: Value) -> &mut Value
-    {
+    pub fn var_mut_or_insert(&mut self, id: &str, default: Value) -> &mut Value {
         self.variables.entry(id.to_string()).or_insert(default)
     }
 }
 
+type BuiltinFunc = fn(&mut Env, Vec<Value>, BTreeMap<&IdType, Value>) -> Result<Value>;
+
 /// The script's running environment.
-#[derive(Debug)]
 pub struct Env {
     /// The 'call stack', first element is the global namespace.
     ns_stack: Vec<RollerNamespace>,
+    builtins: BTreeMap<String, BuiltinFunc>,
+    out_stream: Box<Write>,
+    err_stream: Box<Write>,
 }
 
 impl Env {
     /// Create a new empty context.
-    pub fn new() -> Self {
-        Env {
-            // create the global namespace
-            ns_stack: vec![RollerNamespace::new()],
+    pub fn new(out_stream: Box<Write>, err_stream: Box<Write>) -> Self {
+        let mut builtins: BTreeMap<String, BuiltinFunc> = BTreeMap::new();
+        builtins.insert("println".to_string(), Self::builtin_println_out);
+
+        Env { ns_stack: vec![RollerNamespace::new()], builtins, out_stream, err_stream }
+    }
+
+    fn builtin_println_out(&mut self, vals: Vec<Value>, _kw_vals: BTreeMap<&IdType, Value>)
+        -> Result<Value>
+    {
+        for val in vals {
+            write!(self.out_stream, "{}", val)?;
         }
+        writeln!(self.out_stream, "")?;
+        Ok(Value::Void)
+    }
+
+    fn get_builtin(&self, name: &str) -> Option<BuiltinFunc> {
+        self.builtins.get(name).map(|x| *x)
     }
 
     fn get_local_ns(&self) -> &RollerNamespace {
@@ -81,6 +99,8 @@ impl Env {
     }
 
     /// Evaluate the expression and return a printable message.
+    ///
+    /// Intended to be used in command-line, not piped-in or file input.
     pub fn eval_print(&mut self, ast: &Expr) -> String {
         match self.eval(ast) {
             Ok(val) => {
@@ -90,7 +110,7 @@ impl Env {
                     Value::Num(x) if !x.is_integer() => format!(
                         "{} (≈ {})", x, *x.numer() as f64 / *x.denom() as f64
                     ),
-                    Value::Str(s) => format!("{:?}\nPrinted:\n{}", s, s),
+                    Value::Str(s) => format!("{:?}", s),
                     x => format!("{}", x),
                 };
 
@@ -217,15 +237,30 @@ impl Env {
     /// Evaluate a function call.
     fn eval_call(&mut self, call: &CallExpr) -> Result<Value> {
         // evaluate arguments first
+
+        // ordered arguments
         let mut vals = Vec::with_capacity(call.args.len());
         for expr in call.args.iter() {
             vals.push(self.eval(expr)?);
         }
 
+        // keyword arguments
         let mut kw_vals = BTreeMap::new();
         for &(ref kw, ref expr) in call.kw_args.iter() {
             // later duplicate keyword arguments override previous ones
             kw_vals.insert(kw, self.eval(expr)?);
+        }
+
+        // check if the call is to a builtin function
+        if let Expr::LVal(LValue { visibility, ref root, ref trail }) = *call.func {
+            if let Some(builtin) = self.get_builtin(&root) {
+                if !visibility.is_none() || !trail.is_empty() {
+                    return Err(EvalError::new_from_str_pair(
+                        "InvalidCall", &format!("invalid call to builtin {}", root)
+                    ));
+                }
+                return builtin(self, vals, kw_vals);
+            }
         }
 
         match self.eval(&*call.func)? {
@@ -315,15 +350,21 @@ impl Env {
     fn eval_lvalue(&mut self, lval: &LValue, insert: bool)
         -> Result<&mut Value>
     {
-        use ast::LValVis::*;
+        if self.get_builtin(&lval.root).is_some() {
+            return Err(EvalError::invalid_arg(&format!(
+                "identifier {} is a built-in function",
+                lval.root
+            )));
+        }
 
         // get the root value
         let mut val: *mut Value = {
             // the namespace we want to change
             let val_ns =
-                match lval.visibility {
-                    Global => self.get_mut_global_ns(),
-                    Local => self.get_mut_local_ns(),
+                if lval.is_global() {
+                    self.get_mut_global_ns()
+                } else {
+                    self.get_mut_local_ns()
                 };
 
             if insert {
