@@ -17,6 +17,7 @@ extern {
         "}" => Token::RBrace,
         "->" => Token::RightArrow,
         "<-" => Token::LeftArrow,
+        "=>" => Token::RightFullArrow,
         "=" => Token::Equals,
         "-" => Token::Minus,
         "not" => Token::Not,
@@ -122,8 +123,8 @@ expr0: Expr = {
     <lhs: lvalue> "=" <rhs: expr> => Expr::Assign(lhs, Box::new(rhs)),
     <cmp: comp_expr> => cmp,
     // function call
-    <e: expr1> "<-" <args: expr1*> => Expr::Call(
-        CallExpr::new(e, args, vec![])
+    <e: expr1> "<-" <args: expr1*> <kw_args: (<identifier> "=" <expr1>)*> => Expr::Call(
+        CallExpr::new(e, args, kw_args)
     ),
     expr1 => <>,
 };

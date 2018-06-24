@@ -7,7 +7,7 @@ use num::rational::Ratio;
 use op::OpCode;
 
 /// Regex rules for matching tokens and the functions to create them
-const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
+const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 37] = [
     (r"\(", &|_| Token::LParen),
     (r"\)", &|_| Token::RParen),
     (r"\[", &|_| Token::LBracket),
@@ -17,6 +17,7 @@ const DEFAULT_TOKEN_RULES: [(&'static str, &'static Fn(&str) -> Token); 36] = [
 
     (r"->", &|_| Token::RightArrow),
     (r"<-", &|_| Token::LeftArrow),
+    (r"=>", &|_| Token::RightFullArrow),
 
     (r"=", &|_| Token::Equals),
 
@@ -214,6 +215,8 @@ pub enum Token {
     RightArrow,
     /// `<-`
     LeftArrow,
+    /// `=>`
+    RightFullArrow,
     In,
     If,
     Then,

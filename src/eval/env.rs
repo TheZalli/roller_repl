@@ -272,7 +272,7 @@ impl Env {
                 // iterator for names
                 let mut name_iter = fun_def.arg_names.iter();
                 // iterator for ordered values
-                let vals_len = vals.len(); // used in an error msg
+                let vals_len = vals.len(); // used in an error message
                 let val_iter = vals.into_iter();
 
                 // we don't use name_iter.zip(val_iter) since zip
@@ -291,10 +291,7 @@ impl Env {
                     if ns.insert(name.clone(), val).is_some() {
                         // if we validate function definitions we
                         // should never get here
-                        panic!(
-                            "function has argument named `{}` more \
-                            than once!", name
-                        );
+                        panic!("function has an argument named `{}` more than once!", name);
                     }
                 }
 
@@ -304,15 +301,11 @@ impl Env {
                     // remove the values so in the end we can see if
                     // we had any extra arguments by checking length
                     let val = kw_vals.remove(name).ok_or(
-                        EvalError::invalid_arg(&format!(
-                            "argument `{}` not defined", name
-                        ))
+                        EvalError::invalid_arg(&format!("argument `{}` not defined", name))
                     )?;
 
                     ns.insert(name.clone(), val).ok_or(
-                        EvalError::invalid_arg(&format!(
-                            "tried to pass argument {} twice", name
-                        ))
+                        EvalError::invalid_arg(&format!("tried to pass argument `{}` twice", name))
                     )?;
                 }
 
@@ -352,7 +345,7 @@ impl Env {
     {
         if self.get_builtin(&lval.root).is_some() {
             return Err(EvalError::invalid_arg(&format!(
-                "identifier {} is a built-in function",
+                "identifier `{}` is a built-in function",
                 lval.root
             )));
         }
