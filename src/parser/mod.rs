@@ -1,1 +1,2 @@
-pub mod expr;
+mod expr;
+pub use self::expr::*;

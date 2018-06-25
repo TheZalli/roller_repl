@@ -25,7 +25,6 @@ use rustyline::error::ReadlineError;
 use clap::{Arg, App};
 
 use lexer::{Lexer, LexerState};
-use parser::expr;
 use eval::Env;
 
 fn main() {
@@ -183,14 +182,15 @@ fn main() {
 
                         // strip the location data
                         let tokens = tokens.into_iter().map(|(_, x)| x);
-                        let parse_res = expr::parse_line(tokens);
+                        let parse_res = parser::parse_line(tokens);
 
                         if debug_mode {
                             println!("Parsed: {:?}\n", parse_res);
                         }
 
-                        if let Ok(exp) = parse_res {
-                            println!("{}", env.eval_print(&exp));
+                        match parse_res {
+                            Ok(exp) => println!("{}", env.eval_print(&exp)),
+                            Err(e) => println!("Parse error: {:?}", e),
                         }
                     },
                     Err(e) => println!("Lexing error: {:?}", e),
