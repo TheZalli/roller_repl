@@ -48,7 +48,7 @@ fn main() {
                 .help("Prints the output of evaluation into the given file"))
             .get_matches();
 
-    let debug_mode = clap_matches.is_present("debug");
+    let mut debug_mode = clap_matches.is_present("debug");
     let use_input_file = clap_matches.is_present("input file");
     let use_output_file = clap_matches.is_present("output file");
 
@@ -144,7 +144,6 @@ fn main() {
 
         match line_res {
             Ok(input) => {
-                // ok input
                 if out_isatty {
                     rl.add_history_entry(&input.trim_right());
                 } else {
@@ -155,6 +154,29 @@ fn main() {
 
                 // by-default do not continue
                 continuing = false;
+
+                // check interpreter commands
+                if input.trim_left().starts_with('#') {
+                    let mut word_iter = input[1..].split_whitespace();
+                    match word_iter.next() {
+                        Some("debug") => match word_iter.next() {
+                            None => eprintln!("Debug prints are {}",
+                                             if debug_mode { "on" } else { "off" }),
+
+                            Some(s) => if let Some(b) = parse_bool(s) {
+                                debug_mode = b;
+                                eprintln!("Debug prints are now {}",
+                                         if debug_mode { "on" } else { "off" })
+
+                            } else {
+                                eprintln!("Invalid value for debug command");
+                            }
+                        }
+                        Some(cmd) => eprintln!("Invalid command `{}`", cmd),
+                        None => eprintln!("Invalid empty command")
+                    }
+                    continue;
+                }
 
                 match lexer.parse(&input, lexer_state) {
                     // continue to the next iteration
@@ -235,4 +257,12 @@ fn main() {
 
     // this is a command-line application so we want to return the status number
     ::std::process::exit(return_status);
+}
+
+fn parse_bool<'a>(input: &'a str) -> Option<bool> {
+    match input.to_ascii_lowercase().as_str() {
+        "1"|"t"|"true"|"y"|"yes"|"on" => Some(true),
+        "0"|"f"|"false"|"n"|"no"|"off" => Some(false),
+        _ => None
+    }
 }

@@ -58,6 +58,8 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
         * This makes recursive if expressions are possible
         * Maybe an if-statement that doesn't have else-part and doesn't return a value is added sometime?
 * Enabling debug prints via the `--debug`/`-d` flag
+* Interpreter commands
+    * `#debug [true|false]` enables or disables debug prints
 
 ## What is not yet implemented
 * So many things
