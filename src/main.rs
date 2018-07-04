@@ -50,7 +50,7 @@ fn main() {
 
     let mut debug_mode = clap_matches.is_present("debug");
     let use_input_file = clap_matches.is_present("input file");
-    let use_output_file = clap_matches.is_present("output file");
+    let _use_output_file = clap_matches.is_present("output file");
 
     let in_isatty;
     #[cfg(unix)] {

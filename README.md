@@ -23,16 +23,16 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
         * No string operations yet
         * String escaping works, but even escaped backslashes are not allowed before the ending quotation mark
             * (like in Python)
-    * List (`{1, 2, 3}`)
+    * List (`[1, 2, 3]`)
         * Implemented as a Rust vector
-    * Map (`{1:"a", 2:"b", 3:"c"}`)
+    * Map (`[1:"a", 2:"b", 3:"c"]`)
         * Implemented as a Rust binary tree map
-    * Distribution (`{ 1 | 2 | 3 }` or `{ true:2 | false:1 }`)
+    * Distribution (`[ 1 | 2 | 3 ]` or `[ true:2 | false:1 ]`)
         * A weighted discrete distribution, implemented as a binary tree map, like the previous map datatype
         * Each element allows an optional weight value separated by a colon
             * The value has to be an integer
         * Duplicate key values are merged and the result's weight value will be their sum
-    * Functions (`a b -> a + b`)
+    * Functions (`{a, b; a + b}`)
         * Functions are just another datatype
 * Variables
     * Variable identifiers are unicode strings
@@ -50,7 +50,7 @@ It is written in the [LALRPOP](https://github.com/nikomatsakis/lalrpop) rule syn
         * Equality and inequality are `a is b` and `a isnt b`
     * Returns a boolean value
 * Function call and collection indexing
-    * `foo <- 1 2`, `(x y -> x + y*2) <- 1 2`
+    * `foo(5)`, `{x y; x + y*2}(1, 2)`
 * If-expression
     * `if x is 2 then "hello" else "hi"`
     * Only works for booleans

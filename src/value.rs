@@ -120,7 +120,6 @@ impl Value {
                             };
 
                         if let Some(indexed_value) = vec.get_mut(idx) {
-                            // TODO remove clone, some day...
                             Ok(indexed_value)
                         } else {
                             Err(EvalError::invalid_arg(&format!(
@@ -256,10 +255,11 @@ impl Value {
 
 impl fmt::Display for FunDef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{ ")?;
         for arg in &self.arg_names {
             write!(f, "{} ", arg)?;
         }
-        write!(f, "-> {}", self.body)
+        write!(f, "; {} }}", self.body)
     }
 }
 
@@ -288,23 +288,23 @@ impl fmt::Display for Value {
             &Value::Bool(x) => write!(f, "{}", x),
             &Value::Str(ref x) => write!(f, "{}", x),
             &Value::Func(ref x) => write!(f, "{}", x),
-            &Value::List(ref x) => print_container!("{", x.iter(), ", ", "}"),
+            &Value::List(ref x) => print_container!("[", x.iter(), ", ", "]"),
             &Value::Map(ref x) =>
                 if x.is_empty() {
                     // otherwise empty set is the same as empty map
-                    write!(f, "{{:}}")
+                    write!(f, "[:]")
                 } else {
-                    print_container!("{",
+                    print_container!("[",
                         x.iter().map(|(k, v)| format!("{}:{}", k, v)),
-                    ", ", "}")
+                    ", ", "]")
                 },
             &Value::Distribution(ref x) =>
                 if x.is_empty() {
-                    write!(f, "{{|}}")
+                    write!(f, "[|]")
                 } else {
-                    print_container!("{",
+                    print_container!("[",
                         x.iter().map(|(k, v)| format!("{}:{}", k, v)),
-                    " | ", "}")
+                    " | ", "]")
                 },
         }
     }
