@@ -68,13 +68,10 @@ sep_list<T, S>: Vec<T> = {
 
 // like sep_list, but needs at least 1 item with optional trailing separator
 sep_list_plus<T, S>: Vec<T> = {
-    <v:(<T> S)+> <e: T?> => match e {
-        None => v,
-        Some(e) => {
-            let mut v = v;
-            v.push(e);
-            v
-        }
+    <v:(<T> S)*> <e: T> S? => {
+        let mut v = v;
+        v.push(e);
+        v
     }
 };
 
@@ -116,11 +113,18 @@ expr0: Expr = {
     // right-associative
     <lhs: lvalue> "=" <rhs: expr> => Expr::Assign(lhs, Box::new(rhs)),
     <cmp: comp_expr> => cmp,
-    // function call
-    <e: expr1> "(" <args: comma<expr1>> ")" => Expr::Call(
-        CallExpr::new(e, args, vec!())
-    ),
+    funcall => Expr::Call(<>),
     expr1 => <>,
+};
+
+funcall: CallExpr = {
+    <e: expr1> "(" <args: comma<expr1>> ")" =>
+        CallExpr::new(e, args, vec!()),
+    <e: expr1> "(" <kwargs: comma_plus<(<identifier> "=" <expr1>)>> ")" =>
+        CallExpr::new(e, vec!(), kwargs),
+    <e: expr1> "(" <args: (<expr1> ",")+>
+                   <kwargs: comma_plus<(<identifier> "=" <expr1>)>> ")" =>
+        CallExpr::new(e, args, kwargs),
 };
 
 // precedence levels

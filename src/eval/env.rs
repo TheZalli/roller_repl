@@ -304,9 +304,11 @@ impl Env {
                         EvalError::invalid_arg(&format!("argument `{}` not defined", name))
                     )?;
 
-                    ns.insert(name.clone(), val).ok_or(
-                        EvalError::invalid_arg(&format!("tried to pass argument `{}` twice", name))
-                    )?;
+                    if let Some(_) = ns.insert(name.clone(), val) {
+                        return Err(EvalError::invalid_arg(&format!(
+                            "tried to pass argument `{}` twice", name
+                        )))
+                    };
                 }
 
                 if !kw_vals.is_empty() {
