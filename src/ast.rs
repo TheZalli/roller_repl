@@ -2,7 +2,6 @@
 ///! Abstract syntax tree representation.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt;
 
 use value::{Value, IdType};
 use op::OpCode;
@@ -126,11 +125,7 @@ impl CallExpr {
                kw_args: Vec<(IdType, Expr)>)
                -> Self
     {
-        CallExpr {
-            func: Box::new(func),
-            args: args,
-            kw_args: kw_args,
-        }
+        CallExpr { func: Box::new(func), args, kw_args }
     }
 }
 
@@ -142,29 +137,5 @@ impl Control {
             then_expr: Box::new(then_expr),
             else_expr: Box::new(else_expr),
         }
-    }
-}
-
-impl fmt::Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Expr::Val(ref x) => write!(f, "{}", x),
-            _ => write!(f, "{:?}", self) // TODO
-        }
-    }
-}
-
-impl fmt::Display for LValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.visibility {
-            Some(LValVis::Global) => write!(f, "global.")?,
-            Some(LValVis::Local) => write!(f, "local.")?,
-            None => {},
-        }
-        write!(f, "{}", self.root)?;
-        for part in self.trail.iter() {
-            write!(f, ".{}", part)?;
-        }
-        Ok(())
     }
 }

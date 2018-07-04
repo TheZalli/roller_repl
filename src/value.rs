@@ -1,4 +1,3 @@
-use std::fmt;
 use std::ops;
 use std::collections::{BTreeSet, BTreeMap};
 
@@ -249,63 +248,6 @@ impl Value {
             _ => Err(EvalError::unsupported_op(
                 "boolean operators are not supported between these types"
             ))
-        }
-    }
-}
-
-impl fmt::Display for FunDef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{ ")?;
-        for arg in &self.arg_names {
-            write!(f, "{} ", arg)?;
-        }
-        write!(f, "; {} }}", self.body)
-    }
-}
-
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        macro_rules! print_container {
-            ($start:expr, $iterator:expr, $separator:expr, $end:expr) => ({
-                let mut it = $iterator;
-                write!(f, "{}", $start)?;
-                if let Some(val) = it.next() {
-                    // print first
-                    write!(f, "{}", val)?;
-                }
-                for val in it {
-                    // print rest
-                    write!(f, "{}{}", $separator, val)?;
-                }
-                write!(f, "{}", $end)
-            })
-        }
-
-        match self {
-            &Value::Void => write!(f, ""),
-            &Value::None => write!(f, "none"),
-            &Value::Num(x) => write!(f, "{}", x),
-            &Value::Bool(x) => write!(f, "{}", x),
-            &Value::Str(ref x) => write!(f, "{}", x),
-            &Value::Func(ref x) => write!(f, "{}", x),
-            &Value::List(ref x) => print_container!("[", x.iter(), ", ", "]"),
-            &Value::Map(ref x) =>
-                if x.is_empty() {
-                    // otherwise empty set is the same as empty map
-                    write!(f, "[:]")
-                } else {
-                    print_container!("[",
-                        x.iter().map(|(k, v)| format!("{}:{}", k, v)),
-                    ", ", "]")
-                },
-            &Value::Distribution(ref x) =>
-                if x.is_empty() {
-                    write!(f, "[|]")
-                } else {
-                    print_container!("[",
-                        x.iter().map(|(k, v)| format!("{}:{}", k, v)),
-                    " | ", "]")
-                },
         }
     }
 }

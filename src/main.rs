@@ -17,6 +17,7 @@ mod ast;
 mod lexer;
 mod parser;
 mod eval;
+mod fmt;
 
 use std::io::{Read, BufRead, BufReader, Lines, stdin, stdout, stderr};
 use std::fs::File;
@@ -207,15 +208,15 @@ fn main() {
                         let parse_res = parser::parse_line(tokens);
 
                         if debug_mode {
-                            println!("Parsed: {:?}\n", parse_res);
+                            println!("Parsed: {:#?}\n", parse_res);
                         }
 
                         match parse_res {
                             Ok(exp) => println!("{}", env.eval_print(&exp)),
-                            Err(e) => println!("Parse error: {:?}", e),
+                            Err(e) => println!("Parse error: {:#?}", e),
                         }
                     },
-                    Err(e) => println!("Lexing error: {:?}", e),
+                    Err(e) => println!("Lexing error: {:#?}", e),
                 }
             },
 
